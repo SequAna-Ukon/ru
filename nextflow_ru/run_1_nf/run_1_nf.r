@@ -121,9 +121,11 @@ ggplot(pcaData, aes(PC1, PC2, color=time_hr, shape=axenic)) +
 
 ggsave("nextflow_ru/run_1_nf/rna_1_all_sample_pca.png")
 
+# The PCA seems to be in good agreement with Ru's PCA
+
 # Next we want to find the genes that are DE for each
 # of the time comparisons
-# Turns out that there is no 
+# Turns out that there are none. In particular we will look up the results for the PHATRDRAFT_43365 gene.
 common_genes = Reduce(intersect, de_genes) # Empty.
 # PHATRDRAFT_43365 is not a DEG in the 48 time point according to our analysis
 #                   baseMean log2FoldChange     lfcSE      stat    pvalue      padj
