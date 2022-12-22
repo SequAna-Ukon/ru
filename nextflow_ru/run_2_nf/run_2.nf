@@ -1,8 +1,8 @@
 #!/usr/bin/env nextflow
 
 /*
-A Nextflow pipeline for processing the run1 data of Ru.
-It is single-end bulk RNA-seq
+A Nextflow pipeline for processing the run2 data of Ru.
+It is paired-end bulk RNA-seq
 */
 
 samples_ch = Channel.fromFilePairs("/home/humebc/projects/ru/raw_seq_data/run_2/X204SC22093327-Z01-F001_0*/01.RawData/*/*{_1,_2}.fq.gz", size: 2)

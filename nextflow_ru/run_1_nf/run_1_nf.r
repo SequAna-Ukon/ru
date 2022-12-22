@@ -6,7 +6,7 @@
 # I then further processed this file with: awk -F "\t" 'BEGIN{print "TXNAME\tGENEID"} {gsub("rna-", "", $1); gsub("gene-", "", $2); print $1 "\t" $2}' tx2gene.raw > tx2gene.txt
 # To produce the final tx2gene file
 
-# I also created a samples meta file: /home/humebc/projects/ru/nextflow_ru/run_1_nf/samples.csv
+# I also created a samples meta file: /home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv
 
 library(dplyr)
 library(stringr)
@@ -20,7 +20,7 @@ library(ggvenn)
 load(file = "nextflow_ru/run_1_nf/run_1_data.RData")
 
 tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
-samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_1_nf/samples.csv", header=TRUE)
+samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv", header=TRUE)
 samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(time_hr)) %>% mutate(axenic = relevel(axenic, "TRUE"))
 
 
@@ -83,9 +83,10 @@ plotting_df = data.frame(contrast_time=as.factor(contrast_time), num_genes=num_g
 # I.e. stacked bar plot, one stack for each time with up and down regulated
 # gene counts for each bar.
 ggplot(plotting_df, aes(fill=up_down, y=num_genes, x=contrast_time, label=num_genes)) + 
-    geom_bar(position="stack", stat="identity") + geom_text(size = 10, position = position_stack(vjust = 0.5))
+    geom_bar(position="stack", stat="identity") + geom_text(size = 10, position = position_stack(vjust = 0.5)) + 
+    scale_fill_manual(values=c("up" = "#404040", "down" = "#AFABAB")) + ggtitle("1st RNA-seq run DEGs")
 
-ggsave("nextflow_ru/run_1_nf/stacked_bars.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_stacked_bars.png")
 
 
 
@@ -115,9 +116,10 @@ ggplot(pcaData, aes(PC1, PC2, color=time_hr, shape=axenic)) +
   geom_point(size=3) +
   xlab(paste0("PC1: ",percentVar[1],"% variance")) +
   ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
-  coord_fixed()
+  coord_fixed() + scale_color_manual(values=c("0" = "#000000", "0.5" = "#D721BB", "3" = "#144BD5", "24" = "#3CCA23", "48" = "#21CBCA")) +
+  ggtitle("1st RNA-seq PCA all samples")
 
-ggsave("nextflow_ru/run_1_nf/all_sample_pca.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_all_sample_pca.png")
 
 # Next we want to find the genes that are DE for each
 # of the time comparisons
@@ -131,10 +133,10 @@ common_genes = Reduce(intersect, de_genes) # Empty.
 # Make a Venn of the gene overlap
 ggvenn(
   de_genes, 
-  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  fill_color = c("#D721BB", "#144BD5", "#3CCA23", "#21CBCA"),
   stroke_size = 0.5, set_name_size = 8
   )
-ggsave("nextflow_ru/run_1_nf/gene_venn.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.png")
 
 # Let's make some heat maps to look at the gene expressions across the samples
 annotation_df_all_samples <- as.data.frame(colData(dds_all_samples)[,c("time_hr","axenic")])
@@ -150,13 +152,13 @@ de_genes_unique = unique(Reduce(c, de_genes))
 # First the heat map of the 43365 gene across all samples
 # We make the heat map with one other random gene as the heat map doesn't work with 1 row.
 heat = pheatmap(vsd_assay_all_samples[c("PHATRDRAFT_43365", "PHATRDRAFT_55137"),], cluster_rows=FALSE, show_rownames=TRUE, cluster_cols=TRUE, scale="row", annotation_col = annotation_df_all_samples)
-ggsave("nextflow_ru/run_1_nf/heatmap_PHATRDRAFT_43365.png", heat)
+ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_PHATRDRAFT_43365.png", heat)
 
 # Then a heat map of all DE genes across all samples
 heat = pheatmap(vsd_assay_all_samples[de_genes_unique,], cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=TRUE, scale="row", annotation_col = annotation_df_all_samples)
-ggsave("nextflow_ru/run_1_nf/heatmap_all_DE.png", heat)
+ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_all_DE.png", heat)
 
-# And finally do 1 with only the 48hr samples
+# And finally do one with only the 48hr samples
 time_48 = 48
 samples_sub_48 = samples %>% dplyr::filter(time_hr==time_48)
 
@@ -180,7 +182,7 @@ colnames(vsd_assay_only_48) = rownames(annotation_df_only_48)
 
 # We make the heat map with one other random gene as the heat map doesn't work with 1 row.
 heat = pheatmap(vsd_assay_only_48[c("PHATRDRAFT_43365", "PHATRDRAFT_55137"),], cluster_rows=FALSE, show_rownames=TRUE, cluster_cols=TRUE, scale="row", annotation_col = annotation_df_only_48)
-ggsave("nextflow_ru/run_1_nf/heatmap_PHATRDRAFT_43365_only_48.png", heat)
+ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_PHATRDRAFT_43365_only_48.png", heat)
 
 
 # Save the data
