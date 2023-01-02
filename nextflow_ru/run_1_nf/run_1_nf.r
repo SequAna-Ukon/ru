@@ -60,6 +60,10 @@ for (time in times){
     # Create the DESEQ2 object
     dds = DESeqDataSetFromTximport(txi, colData = samples_sub, design = ~ axenic)
 
+    # Filter out those genes with <10 counts in more than 1/4 of the samples
+    keep <- rowSums(counts(dds) >= 10) >= ceiling(dim(samples_sub)[[1]]/4)
+    dds <- dds[keep,]
+
     # Fit the model and run the DE analysis
     dds = DESeq(dds)
     
@@ -86,7 +90,7 @@ ggplot(plotting_df, aes(fill=up_down, y=num_genes, x=contrast_time, label=num_ge
     geom_bar(position="stack", stat="identity") + geom_text(size = 10, position = position_stack(vjust = 0.5)) + 
     scale_fill_manual(values=c("up" = "#404040", "down" = "#AFABAB")) + ggtitle("1st RNA-seq run DEGs")
 
-ggsave("nextflow_ru/run_1_nf/rna_1_stacked_bars.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_stacked_bars.filtered.png")
 
 
 
@@ -101,6 +105,10 @@ txi_all_samples = tximport(files_all_samples, type = "kallisto", tx2gene = tx2ge
 
 # Create the DESEQ2 object
 dds_all_samples = DESeqDataSetFromTximport(txi_all_samples, colData = samples, design = ~ axenic)
+
+# Filter out those genes with <10 counts in more than 1/4 of the samples
+keep_all_samples <- rowSums(counts(dds_all_samples) >= 10) >= ceiling(dim(samples)[[1]]/4)
+dds_all_samples <- dds_all_samples[keep_all_samples,]
 
 # Fit the model and run the DE analysis
 dds_all_samples = DESeq(dds_all_samples)
@@ -119,7 +127,7 @@ ggplot(pcaData, aes(PC1, PC2, color=time_hr, shape=axenic)) +
   coord_fixed() + scale_color_manual(values=c("0" = "#000000", "0.5" = "#D721BB", "3" = "#144BD5", "24" = "#3CCA23", "48" = "#21CBCA")) +
   ggtitle("1st RNA-seq PCA all samples")
 
-ggsave("nextflow_ru/run_1_nf/rna_1_all_sample_pca.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_all_sample_pca.filtered.png")
 
 # The PCA seems to be in good agreement with Ru's PCA
 
@@ -130,7 +138,7 @@ common_genes = Reduce(intersect, de_genes) # Empty.
 # PHATRDRAFT_43365 is not a DEG in the 48 time point according to our analysis
 #                   baseMean log2FoldChange     lfcSE      stat    pvalue      padj
 #                  <numeric>      <numeric> <numeric> <numeric> <numeric> <numeric>
-# PHATRDRAFT_43365   582.713        1.41715  0.813548   1.74194 0.0815194   0.23176
+# PHATRDRAFT_43365   582.7921       1.417574 0.8136896 1.742155 0.08148128   0.2282742
 
 # Make a Venn of the gene overlap
 ggvenn(
@@ -138,7 +146,7 @@ ggvenn(
   fill_color = c("#D721BB", "#144BD5", "#3CCA23", "#21CBCA"),
   stroke_size = 0.5, set_name_size = 8
   )
-ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.png")
+ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.filtered.png")
 
 # Let's make some heat maps to look at the gene expressions across the samples
 annotation_df_all_samples <- as.data.frame(colData(dds_all_samples)[,c("time_hr","axenic")])

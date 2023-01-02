@@ -218,3 +218,4 @@ ggplot(pcaData_non_shaking, aes(PC1, PC2, color=cell_line, shape=treatment)) +
   coord_fixed() + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000")) + ggtitle("2nd RNA-seq non-shaking PCA")
 
 ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.png")
+
