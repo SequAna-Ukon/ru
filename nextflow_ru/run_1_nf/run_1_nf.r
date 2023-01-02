@@ -194,6 +194,64 @@ colnames(vsd_assay_only_48) = rownames(annotation_df_only_48)
 heat = pheatmap(vsd_assay_only_48[c("PHATRDRAFT_43365", "PHATRDRAFT_55137"),], cluster_rows=FALSE, show_rownames=TRUE, cluster_cols=TRUE, scale="row", annotation_col = annotation_df_only_48)
 ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_PHATRDRAFT_43365_only_48.png", heat)
 
+# Finally as an additional approach to this analysis I want to run a DE expression
+# using some subsets of the data
+# We have seen from the PCA that the difference between the axenic states is
+# largest for the 24 hour samples but I would also include the 3 and 48 hour samples
+# and see if we can find significant genes.
+# Let's start by running the DE with all of the time points except 0.
+time_points = c(3, 24, 48)
+tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
+samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv", header=TRUE)
+samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(time_hr)) %>% mutate(axenic = relevel(axenic, "TRUE"))
+samples_sub = samples %>% dplyr::filter(time_hr %in% time_points)
+
+# Make a vector that contains the full paths to the abundance.h5 files
+kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/results/kallisto"
+
+files <- file.path(kallisto.base.dir, samples_sub$dir_name, "abundance.h5")
+
+# Finally we can use tximport to read in the abundance tables
+# and perform the normalizations
+txi = tximport(files, type = "kallisto", tx2gene = tx2gene)
+
+# Create the DESEQ2 object
+dds = DESeqDataSetFromTximport(txi, colData = samples_sub, design = ~ axenic)
+
+# Filter out those genes with <10 counts in more than 1/4 of the samples
+keep <- rowSums(counts(dds) >= 10) >= ceiling(dim(samples_sub)[[1]]/4)
+dds <- dds[keep,]
+
+# Fit the model and run the DE analysis
+dds = DESeq(dds)
+
+res = results(dds)
+
+res.df = as.data.frame(res) %>% dplyr::arrange(padj)
+head(res.df)
+
+# > head(res.df)
+#                    baseMean log2FoldChange      lfcSE      stat       pvalue
+# PHATRDRAFT_43365  1548.7911      3.8539681 0.37605531 10.248408 1.203091e-24
+# PHATRDRAFT_48554  4218.4944      4.5133006 0.51335526  8.791768 1.472240e-18
+# PHATRDRAFT_50288  7614.6849      1.1720971 0.16612762  7.055402 1.721023e-12
+# PHATRDRAFT_44925   187.1997      4.3949089 0.72402836  6.070078 1.278478e-09
+# PHATRDRAFT_43020 13960.1351      0.4619692 0.08115779  5.692235 1.253868e-08
+# PHATRDRAFT_48069  3156.8690      1.1386302 0.19977389  5.699595 1.200926e-08
+#                          padj
+# PHATRDRAFT_43365 1.218370e-20
+# PHATRDRAFT_48554 7.454685e-15
+# PHATRDRAFT_50288 5.809599e-09
+# PHATRDRAFT_44925 3.236787e-06
+# PHATRDRAFT_43020 2.116320e-05
+# PHATRDRAFT_48069 2.116320e-05
+
+# This confirms the findings that the 43365 gene is the right gene to knock out.
+
+# SUMMARY: The overall conclusions of the R work are that the gene they knocked out is
+# was a good choice as it shows up in the WGCNA and DESEQ2 analyses. However,
+# we were not able to identify gene modules that relate to the axenic state using
+# the three time points.
 
 # Save the data
 save.image(file = "nextflow_ru/run_1_nf/run_1_data.RData")
