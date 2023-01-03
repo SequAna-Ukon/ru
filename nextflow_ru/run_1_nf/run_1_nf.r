@@ -228,8 +228,7 @@ dds = DESeq(dds)
 res = results(dds)
 
 res.df = as.data.frame(res) %>% dplyr::arrange(padj)
-head(res.df)
-
+head(res.df, 20)
 # > head(res.df)
 #                    baseMean log2FoldChange      lfcSE      stat       pvalue
 # PHATRDRAFT_43365  1548.7911      3.8539681 0.37605531 10.248408 1.203091e-24
@@ -246,6 +245,19 @@ head(res.df)
 # PHATRDRAFT_43020 2.116320e-05
 # PHATRDRAFT_48069 2.116320e-05
 
+# Write out the list of DE genes P<0.01
+de_genes = res.df %>% dplyr::filter(padj<0.01) %>% arrange(padj)
+save(de_genes, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
+
+# Now compare this to the adjacency score of 43365
+load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adj_plot_df.RData")
+head(adj_plot_df)
+# I want to plot the significance of the DE expressed genes and highlight those with high adjacency in red
+high_adj_genes = row.names(adj_plot_df %>% dplyr::filter(adj > 0.1))
+res.df.plot = res.df %>% mutate(x_val=1, rn=row.names(res.df), col=dplyr::case_when(rn %in% high_adj_genes ~ "red", TRUE ~ "black")) %>% dplyr::filter(padj<0.01)
+ggplot(res.df.plot, aes(x=x_val, y=-log10(padj), lab=rn, color=col)) + geom_point() + geom_label_repel(aes(label=rn), label.size=0.01) + scale_color_manual(values = c("red" = "red", "black" = "black")) + guides(color = "none") +
+ggtitle("DE genes (P<0.01); red == adjacency to PHATRDRAFT_43365 > 0.1")
+ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/DEgenes.adjacency.subset.png", height=40, width=20, units="cm")
 # This confirms the findings that the 43365 gene is the right gene to knock out.
 
 # SUMMARY: The overall conclusions of the R work are that the gene they knocked out is

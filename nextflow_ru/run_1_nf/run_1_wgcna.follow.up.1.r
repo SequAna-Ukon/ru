@@ -430,9 +430,114 @@ geneTraitSignificance_adj["PHATRDRAFT_43365",]
 #                  GS.axenic  p.GS.axenic GS.time_hr p.GS.time_hr adj_score
 # PHATRDRAFT_43365 0.8487865 8.456006e-06 -0.1048682    0.6787848  7.060198
 
+# TODO It's also useful to have a look at the module membership of PHATRDRAFT_43365
+# to show that it is not a strong member of any of the modules.
+# TODO we can also look to see if there are any genes to which PHATRDRAFT_43365
+# has a particularly strong connection as these would be the genes that 
+# it is likely involved in the regulation of.
+geneModuleMembership["PHATRDRAFT_43365",]
+# > geneModuleMembership["PHATRDRAFT_43365",]
+#                  MMmediumpurple3  MMcoral2 MMfloralwhite     MMblack  MMsienna3
+# PHATRDRAFT_43365        0.073501 0.1188302     0.2519848 -0.05693819 -0.1751843
+#                  MMhoneydew1   MMmaroon MMdarkolivegreen MMlavenderblush3
+# PHATRDRAFT_43365   -0.133679 0.02852935        0.1136577       -0.1022929
+#                    MMgrey
+# PHATRDRAFT_43365 0.512664
+# THis is confusing because according to the modulemembership, PHATRDRAFT_43365 would be a member
+# of the Grey group. However in the module assignment it is a member of the coral2 group.
+# This is apparently due to how the module assignments are done (https://www.biostars.org/p/76611/)
+
+# Now let's look at which genes PHATRDRAFT_43365 has a strong connection to
+adj_plot_df = data.frame(adj=as.numeric(adjacency["PHATRDRAFT_43365",]))
+row.names(adj_plot_df) = names(adjacency["PHATRDRAFT_43365",])
+summary(adj_plot_df$adj)
+head(adj_plot_df %>% dplyr::arrange(desc(adj)), 20)
+adj_plot_df = adj_plot_df %>% mutate(gene = "PHATRDRAFT_43365", label=row.names(adj_plot_df))
+ggplot(adj_plot_df, aes(x=gene, y=adj, lab=label)) + geom_point() + geom_label_repel(aes(label=ifelse(adj > .1, label, ""))) + ggtitle("Adjacency score to PHATRDRAFT_43365")
+# > head(adj_plot_df %>% dplyr::arrange(desc(adj)), 20)
+#                         adj
+# PHATRDRAFT_43365 1.00000000
+# PHATRDRAFT_48554 0.80303596
+# PHATRDRAFT_48069 0.61900382
+# PHATRDRAFT_55070 0.45620549
+# PHATRDRAFT_46444 0.26431079
+# PHATRDRAFT_50288 0.25122068
+# PHATRDRAFT_33892 0.24997839
+# PHATRDRAFT_43020 0.24476284
+# PHATRDRAFT_45862 0.17656256
+# PHATRDRAFT_43081 0.17503532
+# PHATRDRAFT_49510 0.17010541
+# PHATRDRAFT_40174 0.16466467
+# PHATRDRAFT_33664 0.14630032
+# PHATRDRAFT_48064 0.12164598
+# PHATRDRAFT_48558 0.10943451
+# PHATRDRAFT_43363 0.09803264
+# PHATR_44100      0.08924753
+# PHATRDRAFT_49590 0.08711789
+# PHATRDRAFT_47845 0.07600548
+# PHATRDRAFT_15935 0.07491525
+# This is super interesting. We can compare this list to the list of 
+# DE expressed genes and we see that there is a large overlap.
+# I will output this list so that we can compare it to the DE genes
+# I have made the figure here: /home/humebc/projects/ru/nextflow_ru/run_1_nf/DEgenes.adjacency.subset.png
+# All in all this shows us that approximately half of the significant genes are related to PHATRDRAFT_43365 each other.
+save(adj_plot_df, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adj_plot_df.RData")
+
+# next most signficacnt gene that wasn't related to PHATRDRAFT_43365 was PHATRDRAFT_44925.
+# I want to do 2 things. I want to check its adjacency to PHATRDRAFT_43365.
+# > adj_plot_df["PHATRDRAFT_44925",]
+#                          adj             gene            label
+# PHATRDRAFT_44925 0.003807441 PHATRDRAFT_43365 PHATRDRAFT_44925
+# Then I want to pull up the adjacency scores of PHATRDRAFT_44925 and see if it relates to
+# the other DE genes.
+adj_plot_df_44925 = data.frame(adj=as.numeric(adjacency["PHATRDRAFT_44925",]))
+row.names(adj_plot_df_44925) = names(adjacency["PHATRDRAFT_44925",])
+adj_plot_df_44925 = adj_plot_df_44925 %>% mutate(gene = "PHATRDRAFT_44925", label=row.names(adj_plot_df_44925)) %>% arrange(desc(adj)) %>% dplyr::filter(adj>0.1)
+summary(adj_plot_df_44925$adj)
+
+ggplot(adj_plot_df_44925, aes(x=gene, y=adj, lab=label)) + geom_point() + geom_label_repel(aes(label=ifelse(adj > .1, label, ""))) + ggtitle("Adjacency score to PHATRDRAFT_44925")
+
+# Read in the list of DE genes
+load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
+de_genes_names = row.names(de_genes)
+sum(row.names(adj_plot_df_44925) %in% de_genes_names)
+# > sum(row.names(adj_plot_df_44925) %in% de_genes_names)
+# [1] 1
+# Of 44925's adjacent genes it is the only gene that is DE expressed.
+
+# We can work up a quick method for this which will give us the number of genes
+# that are DE expressed in those genes with an adjacency score > 0.1 for the given gene
+
+get_de_network_size = function(gene_in_q){
+    adj_plot_df_gene_in_q = data.frame(adj=as.numeric(adjacency[gene_in_q,]))
+    row.names(adj_plot_df_gene_in_q) = names(adjacency[gene_in_q,])
+    adj_plot_df_gene_in_q = adj_plot_df_gene_in_q %>% mutate(gene = gene_in_q, label=row.names(adj_plot_df_gene_in_q)) %>% arrange(desc(adj)) %>% dplyr::filter(adj>0.1)
+
+    list(sum(row.names(adj_plot_df_gene_in_q) %in% de_genes_names), row.names(adj_plot_df_gene_in_q)[row.names(adj_plot_df_gene_in_q) %in% de_genes_names])
+}
+net_scores = lapply(as.list(de_genes_names), FUN=get_de_network_size)
+names(net_scores) = de_genes_names
+# This shows us that the DE genes are largely connected with each other
+# and there appears to be some structure to the networks.
+# From here we would like to do some graphs of the connectivity.
+# I think for sake of keeping things clear
+# I will do this in yet another R script (run_1_networks.r) in which I will 
+# load the adjacency matrix and the de_genes df.
+# We already have the de_genes saved here: "/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData"
+# and then we will save the adjacency matrix:
+save(adjacency, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency.mat.subset.RData")
+
+# Look up the high adjacency genes in the de_genes
+row.names(adj_plot_df_gene_in_q)
+
+# After that I want to see if it's possible to plot up this part of the network.
+
+
 # Somewhat worryingly the adjacency score of the PHATRDRAFT_43365 is relatively low compared to 
 # the dataset average
 summary(geneTraitSignificance_adj)
+save(geneTraitSignificance_adj, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/geneTraitSignificance_adj.subset.RData")
+
 # > summary(geneTraitSignificance_adj)
 #    GS.axenic          p.GS.axenic          GS.time_hr       
 #  Min.   :-0.862977   Min.   :0.0000006   Min.   :-0.989673  
