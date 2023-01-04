@@ -69,10 +69,10 @@ for (time in times){
     
     res = results(dds)
     
-    up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 2 & padj < 0.05)
+    up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 1 & padj < 0.05)
     contrast_time = append(contrast_time, time); num_genes = append(num_genes, dim(up)[[1]]); up_down = append(up_down, "up");
     
-    down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -2 & padj < 0.05)
+    down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -1 & padj < 0.05)
     contrast_time = append(contrast_time, time); num_genes = append(num_genes, dim(down)[[1]]); up_down = append(up_down, "down");
     
     # Collect the differentially expressed genes

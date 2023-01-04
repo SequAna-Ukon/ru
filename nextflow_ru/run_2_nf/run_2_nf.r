@@ -67,10 +67,10 @@ for (time in shaking_times){
     
     res = results(dds)
     
-    up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 2 & padj < 0.05)
+    up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 1 & padj < 0.05)
     contrast_time = append(contrast_time, time); num_genes = append(num_genes, dim(up)[[1]]); up_down = append(up_down, "up");
     
-    down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -2 & padj < 0.05)
+    down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -1 & padj < 0.05)
     contrast_time = append(contrast_time, time); num_genes = append(num_genes, dim(down)[[1]]); up_down = append(up_down, "down");
     
 
@@ -173,10 +173,10 @@ for (time in c(24, 48)){
   dds = DESeq(dds)
   res = results(dds)
 
-  up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 2 & padj < 0.05)
+  up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 1 & padj < 0.05)
   contrast_non_shaking = append(contrast_non_shaking, paste0(time, "h_mutants_vs_WT")); num_genes_non_shaking = append(num_genes_non_shaking, dim(up)[[1]]); up_down_non_shaking = append(up_down_non_shaking, "up");
 
-  down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -2 & padj < 0.05)
+  down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -1 & padj < 0.05)
   contrast_non_shaking = append(contrast_non_shaking, paste0(time, "h_mutants_vs_WT")); num_genes_non_shaking = append(num_genes_non_shaking, dim(down)[[1]]); up_down_non_shaking = append(up_down_non_shaking, "down");
 }
 
@@ -240,9 +240,15 @@ ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.filtered.png")
 
 save.image(file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_nd.RData")
 
-# TODO a strong result would be to compare the differential expressed genes between axenic WT and co-cultured WT
-# (i.e. look for the effect of axenic state) to the DE for mutant vs wild type (both co-cultured). We would hope
-# that there was a large overlap in the DE genes. 
+
+
+########## ADDITIONAL ANALYSES #########
+# A strong result would be to compare the differential expressed genes between axenic WT and co-cultured WT
+# (i.e. look for the effect of axenic state) to the DE for mutant vs wild type (both co-cultured).
+# In the first comparison, the network would would be active in the WT co but not in the WT ax and thus,
+# DE. In the second comparison, the network should be active in the WT co-culture, but nocked out in the
+# mutant samples, so again, the network genes should be DE. Therefore I would expect an overlap of all 3 (first_de, WT_ax_vs_co_de, mut_vs_wt_co_de)
+# of those groups because they should have the network genes as DE genes.
 samples_ax_vs_co = samples %>% dplyr::filter(mutant=="FALSE" & shaking!="TRUE")
 
 files_ax_vs_co <- file.path(kallisto.base.dir, samples_ax_vs_co$dir_name, "abundance.h5")
@@ -295,7 +301,7 @@ res_ax_vs_co["PHATRDRAFT_43365",]
 # TODO have a look at the normalized gene counts and compare them to the RNA-seq 1 experiment.
 # We should be able to see the same sorts of changes in the numbers
 
-# TODO we want to see if the other genes in the DE network that we created from the 
+# we want to see if the other genes in the DE network that we created from the 
 # 1st RNA-seq run are found in the DE genes of this study. This will be achieved
 # by the Venn approach hopefully. See below.
 
@@ -303,7 +309,7 @@ res_ax_vs_co["PHATRDRAFT_43365",]
 save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
 
 
-# TODO from here, I want to get the mutant DE genes and make a comparison of the overlap to
+# Get the mutant DE genes and make a comparison of the overlap to
 # the set of genes above.
 samples_mutant_vs_WT_co = samples %>% dplyr::filter(shaking!="TRUE" & axenic=="FALSE")
 
@@ -388,7 +394,7 @@ res_mutant_co_vs_WT_ax.filtered = res_mutant_co_vs_WT_ax %>% dplyr::filter(padj 
 # > dim(res_mutant_co_vs_WT_ax.filtered)
 # [1] 1091    6
 # This shows that there is a huge number of DE genes between the mutant co-cultured
-# compared to the WT axenic which is not what we want to see.
+# compared to the WT axenic which is not what we expected to see.
 
 res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
 # > res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
@@ -450,7 +456,7 @@ ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/de_genes.Venn.png")
 # mutant vs WT (co-cultured) difference. But there is only a very small over lap.
 # I would also expect there to be an almost complete overlap of the DE genes of 
 # the first analysis with those of the second ax vs co de list. But there is 0 overlap! 
-# This second comparison is essentially a control for the experiment. It fails.
+# This second comparison is essentially a control for the experiment.
 
 
 # I don't see any point in pursuing the WGCNA analysis as there is no way that the network
