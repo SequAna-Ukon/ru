@@ -308,7 +308,7 @@ res_ax_vs_co["PHATRDRAFT_43365",]
 # save this df for use later
 save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
 
-
+########### Mutant DE ###############
 # Get the mutant DE genes and make a comparison of the overlap to
 # the set of genes above.
 samples_mutant_vs_WT_co = samples %>% dplyr::filter(shaking!="TRUE" & axenic=="FALSE")

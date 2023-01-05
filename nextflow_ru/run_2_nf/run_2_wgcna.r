@@ -860,7 +860,7 @@ geneTraitSignificance[rownames(de_genes),]
 # Intra module investigation
 #
 #==============================================
-# Let's look at the genes of darkgreen
+# Let's look at the genes of lightcyan
 # that had the strongest relation to the mutant factor
 module_of_interest = "lightcyan"
 column = match(module_of_interest, modNames)
@@ -896,3 +896,91 @@ save(module_gene_names, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/ligh
 save(adjacency, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency.non_shaking.RData")
 
 # The network is pretty cool.
+# I'd like to compare the list of de genes for the mutant contrast with the
+# gene list from the network (lightcyan module).
+# The contrast we're intersted in has already been done
+# it was called mut_vs_wt_co_de in the venn diagram.
+load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+head(res_mutant_vs_WT_co.filtered)
+dim(res_mutant_vs_WT_co.filtered)
+sum(module_gene_names %in% rownames(res_mutant_vs_WT_co.filtered))
+# > sum(module_gene_names %in% rownames(res_mutant_vs_WT_co.filtered))
+# [1] 82
+length(module_gene_names)
+# > length(module_gene_names)
+# [1] 120
+# 105 out of 120 of the module genes are DE.
+res_mutant_vs_WT_co.filtered$loc = 1
+res_mutant_vs_WT_co.filtered$rn = rownames(res_mutant_vs_WT_co.filtered)
+ggplot(res_mutant_vs_WT_co.filtered, aes(x=loc, y=-log10(padj))) + 
+geom_point(color=dplyr::case_when(res_mutant_vs_WT_co.filtered$rn %in% module_gene_names ~ "red", TRUE ~ "black"), position = "jitter") + 
+ggtitle("Mutant sig genes (red== in lightcycan module membership)")
+ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.padj.scatter.non_shaking.png")
+
+# Then let's plot up the relationship between GS.mutant and padj of the DE genes
+# There are some DE genes that are not in the network
+# First we will filter these out
+dim(res_mutant_vs_WT_co.filtered)
+# [1] 696   8
+res_mutant_vs_WT_co.filtered.nomissing = res_mutant_vs_WT_co.filtered[rownames(res_mutant_vs_WT_co.filtered) %in% rownames(geneTraitSignificance),]
+# Should drop 11 genes
+dim(res_mutant_vs_WT_co.filtered.nomissing)
+# [1] 685   8
+res_mutant_vs_WT_co.filtered.nomissing = res_mutant_vs_WT_co.filtered[rownames(res_mutant_vs_WT_co.filtered) %in% rownames(geneTraitSignificance),]
+
+res_mutant_vs_WT_co.filtered.nomissing$GS.mutant = geneTraitSignificance[rownames(res_mutant_vs_WT_co.filtered.nomissing), "GS.mutant"]
+
+ggplot(res_mutant_vs_WT_co.filtered.nomissing, aes(x=-log10(padj), y=abs(GS.mutant))) + geom_point() +
+geom_point(color=dplyr::case_when(res_mutant_vs_WT_co.filtered.nomissing$rn %in% module_gene_names ~ "red", TRUE ~ "black"), position = "jitter") +
+scale_x_continuous(trans='log10') + ggtitle("padj vs GS.mutant for the mutant DE genes (red=lightcyan module membership)")
+ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/padj.GSmutant.scatter.non_shaking.png")
+
+# We have identified one dense and highly interconnected network.
+# I would be intersted to see if there are other networks in the DE genes.
+# To do this I will compare the connectivity of the genes that are in the identified
+# light cyan module with the connectivity scores of those that are not in the light cyan
+# network to see if we can identify any additional networks.
+
+# For some reason 11 of DE genes are missing form the geneTraitSignificance
+# > rownames(res_mutant_vs_WT_co.filtered)[!rownames(res_mutant_vs_WT_co.filtered) %in% rownames(geneTraitSignificance)]
+#  [1] "PHATRDRAFT_bd1354" "PHATRDRAFT_40515"  "PHATRDRAFT_41294" 
+#  [4] "PHATRDRAFT_40510"  "PHATRDRAFT_31400"  "PHATRDRAFT_54954" 
+#  [7] "PHATRDRAFT_40538"  "PHATRDRAFT_36287"  "PHATRDRAFT_49705" 
+# [10] "PHATRDRAFT_40651"  "PHATRDRAFT_39391"
+# This is OK. The difference is due to the difference between the samples used
+# in making the non-shaking network vs the samples used in the Mutant vs WT co-cultured
+# DE analysis. In the first the genes in quesion are filtered out in the keep step
+# whereas in the second they are not.
+# We will need to take this into account by removing the DE genes that are not
+# found in the network (we have done this above). I.e. if genes are found in the DE genes but not in the geneTraitSignificance
+# then we should remove those genes.
+
+de_gene_names = rownames(res_mutant_vs_WT_co.filtered.nomissing)
+adjacency_de = adjacency[de_gene_names, de_gene_names]
+save(adjacency_de, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_de.non_shaking.RData")
+adjacency_df = data.frame(adj_sum=rowSums(adjacency_de), lc_member=rownames(adjacency_de) %in% module_gene_names)
+ggplot(adjacency_df, aes(x=lc_member, y=adj_sum)) + geom_violin(trim=FALSE) + geom_point() + ggtitle("adjacency_score_vs_lightcyan_membership")
+ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_score_vs_lightcyan_membership.non_shaking.png")
+
+# This shows us that there are some high connectivity genes in the DE genes so there may well be some
+# further networks there.
+
+# We could start by naively trying to plot up the adjacency matrix as a network and see if we can tell
+# any structure from that.
+# quickly look at a heatmap
+load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.RData")
+# These are the names of the 39 genes used in the main lighcycan network.
+head(adjacency_sub_names)
+png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.degenes.adjacency.heatmap.non_shaking.png", width=30, height=30, units="cm", res=600)
+heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% adjacency_sub_names, "red", "black"))
+heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"), RowSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"))
+dev.off()
+# Clearly there is some structure in there
+# I have identified the light cyan module on the plot
+tree = hclust(as.dist(1-adjacency_de), method="average")
+ggdendrogram(tree, rotate = FALSE, size = 2)
+ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.png", width=40, height=10, units="cm")
+plot(tree)
+library(pheatmap)
+pheatmap(as.dist(1-adjacency_de))
+# https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/ pick up here tomorrow.

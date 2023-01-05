@@ -170,3 +170,8 @@ ggtitle("Network of lightcyan module according to their adjacency scores (connec
 
 ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top_10.ggplot.png", height=50, width=40, units="cm")
 
+##########################
+
+# Network of all mutant DE genes including lightcyan module genes
+
+#########################
