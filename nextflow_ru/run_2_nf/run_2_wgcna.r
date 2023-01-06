@@ -12,6 +12,7 @@ library(WGCNA)
 library(gridExtra)
 library(ggdendro)
 library(ggrepel)
+library(pheatmap)
 
 # If the script has already been run through then you can use this load.
 # load(file = "nextflow_ru/run_2_nf/run_1_data.RData")
@@ -966,9 +967,7 @@ ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_score_vs_lightcy
 # This shows us that there are some high connectivity genes in the DE genes so there may well be some
 # further networks there.
 
-# We could start by naively trying to plot up the adjacency matrix as a network and see if we can tell
-# any structure from that.
-# quickly look at a heatmap
+# We will use heatmaps to look for structure in the adjacency matrix
 load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.RData")
 # These are the names of the 39 genes used in the main lighcycan network.
 head(adjacency_sub_names)
@@ -982,13 +981,14 @@ head(adjacency_sub_names)
 # ggdendrogram(tree, rotate = FALSE, size = 2)
 # ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.png", width=40, height=10, units="cm")
 # plot(tree)
-library(pheatmap)
+
 # To identify the other modules we should create a tree and then perform hierarchical clustering on that tree
 hc <- hclust(dist(1-adjacency_de), method = "complete")
 as.dendrogram(hc) %>% plot(horiz = TRUE)
 abline(v=5.8, col = "red")
 gene_clusters = cutree(tree = as.dendrogram(hc), h = 5.8)
 gene_clusters_df = as.data.frame(gene_clusters, row.names=names(gene_clusters))
+
 # > table(gene_clusters)
 # gene_clusters
 #   1   2   3   4   5   6   7   8   9  10  11  12 
@@ -1016,4 +1016,69 @@ dev.off()
 # (/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_de.non_shaking.RData) and we will need
 # the cluster assignments which we will save now
 save(gene_clusters, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.clusters.RData")
+
+###########################
+
+# Axenic DE
+
+###########################
+
+# Now that we've identified the 4 networks in the mutant DE genes
+# let's have a look at the axenic de genes
+# Load the DE genes from the WT ax vs WT co-cultured
+load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
+head(res_ax_vs_co.filtered)
+load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
+head(geneTraitSignificance)
+dim(res_ax_vs_co.filtered)
+# > dim(res_ax_vs_co.filtered)
+# [1] 538   6
+res_ax_vs_co.filtered.nomissing = res_ax_vs_co.filtered[rownames(res_ax_vs_co.filtered) %in% rownames(geneTraitSignificance),]
+dim(res_ax_vs_co.filtered.nomissing)
+# > dim(res_ax_vs_co.filtered.nomissing)
+# [1] 538   6
+# Looks like there's no mismatch between the genes that were part of the network analysis and the DE analysis
+
+de_gene_names_axenic = rownames(res_ax_vs_co.filtered.nomissing)
+adjacency_de_axenic = adjacency[de_gene_names_axenic, de_gene_names_axenic]
+save(adjacency_de_axenic, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_de_axenic.non_shaking.RData")
+
+# Initial look at the heatmap to get an idea of the number of clusters we should be looking to identify
+# What happens if we annotate the padj values
+annot_df = data.frame(padj=-log10(res_ax_vs_co.filtered[rownames(adjacency_de_axenic),]$padj), abs_lg2fc=abs(res_ax_vs_co.filtered[rownames(adjacency_de_axenic),]$log2FoldChange), row.names=rownames(adjacency_de_axenic))
+png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/temp_plot.png", width=40, height=30, units="cm", res=300)
+pheatmap(as.dist(1-adjacency_de_axenic), annotation_row=annot_df)
+dev.off()
+
+
+# To identify the other modules we should create a tree and then perform hierarchical clustering on that tree
+hc_axenic <- hclust(dist(1-adjacency_de_axenic), method = "complete")
+png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/temp_plot.png", width=40, height=30, units="cm", res=300)
+as.dendrogram(hc_axenic) %>% plot(horiz = TRUE)
+abline(v=4.8, col = "red")
+dev.off()
+# Gives us 19 clusters
+# > table(gene_clusters_axenic)
+# gene_clusters_axenic
+#  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 
+# 19 12 22 62 20 18  8 35 32 71 33 20 30 21 16 21 30 15 17 14 22
+gene_clusters_axenic = cutree(tree = as.dendrogram(hc_axenic), h = 4.8)
+gene_clusters_df_axenic = data.frame(gene_clusters = gene_clusters_axenic, row.names=names(gene_clusters_axenic))
+gene_clusters_df_axenic = gene_clusters_df_axenic %>% mutate(gene_clusters=as.factor(gene_clusters))
+
+# row_annotations = row_annotations  %>% 
+# mutate(cluster_1=as.factor(gene_clusters == 1)) %>% 
+# mutate(cluster_3=as.factor(gene_clusters == 3)) %>% 
+# mutate(cluster_9_12_7=as.factor(gene_clusters == 9 | gene_clusters == 12 | gene_clusters == 7)) %>% 
+# mutate(cluster_11=as.factor(gene_clusters == 11))
+png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/axenic.de.non_shaking.adjacency.dendro.potential_networks.png", width=40, height=30, units="cm", res=300)
+pheatmap(as.dist(1-adjacency_de_axenic), annotation_row=annot_df, annotation_col=gene_clusters_df_axenic, main="DE genes for axenic trait, clustered by adjacency matrix")
+dev.off()
+
+# I think there are something like 
+
+# I'm not going to draw up the networks for the idnetified networks because the vizualisations
+# are not very informative.
+
 save.image("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_wgcna.RData")
+
