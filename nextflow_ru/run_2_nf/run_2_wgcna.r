@@ -409,7 +409,7 @@ ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/dark_green_MM_GS_scatter.p
 # TODO we will want to get a list of the mutant DE genes to build a network of the
 # mutant DE genes.
 
-save.image("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_wgcna.RData")
+
 
 # From here we should now subset to the non-shaking a rerun the wgcna analysis.
 
@@ -894,6 +894,7 @@ module_gene_names = rownames(geneModuleMembership)[moduleGenes]
 save(geneTraitSignificance, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
 save(module_gene_names, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/light_cyan_module_genes_names.non_shaking.RData")
 save(adjacency, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency.non_shaking.RData")
+save.image("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_wgcna.RData")
 
 # The network is pretty cool.
 # I'd like to compare the list of de genes for the mutant contrast with the
@@ -971,16 +972,48 @@ ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_score_vs_lightcy
 load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.RData")
 # These are the names of the 39 genes used in the main lighcycan network.
 head(adjacency_sub_names)
-png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.degenes.adjacency.heatmap.non_shaking.png", width=30, height=30, units="cm", res=600)
-heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% adjacency_sub_names, "red", "black"))
-heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"), RowSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"))
-dev.off()
+# png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.degenes.adjacency.heatmap.non_shaking.png", width=30, height=30, units="cm", res=600)
+# heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% adjacency_sub_names, "red", "black"))
+# heatmap(adjacency_de, ColSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"), RowSideColors=ifelse(rownames(adjacency_de) %in% module_gene_names, "red", "black"))
+# dev.off()
 # Clearly there is some structure in there
 # I have identified the light cyan module on the plot
-tree = hclust(as.dist(1-adjacency_de), method="average")
-ggdendrogram(tree, rotate = FALSE, size = 2)
-ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.png", width=40, height=10, units="cm")
-plot(tree)
+# tree = hclust(as.dist(1-adjacency_de), method="average")
+# ggdendrogram(tree, rotate = FALSE, size = 2)
+# ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.png", width=40, height=10, units="cm")
+# plot(tree)
 library(pheatmap)
-pheatmap(as.dist(1-adjacency_de))
-# https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/ pick up here tomorrow.
+# To identify the other modules we should create a tree and then perform hierarchical clustering on that tree
+hc <- hclust(dist(1-adjacency_de), method = "complete")
+as.dendrogram(hc) %>% plot(horiz = TRUE)
+abline(v=5.8, col = "red")
+gene_clusters = cutree(tree = as.dendrogram(hc), h = 5.8)
+gene_clusters_df = as.data.frame(gene_clusters, row.names=names(gene_clusters))
+# > table(gene_clusters)
+# gene_clusters
+#   1   2   3   4   5   6   7   8   9  10  11  12 
+#  48  17  42  62  41  31  42 223  69  46  36  28
+# Clustering at 5.8 should give us 12 clusters which we can then annotate on the 
+# We want to add annotations according to the light cyan membership
+light_cyan_membership_df = as.data.frame(ifelse(rownames(adjacency_de) %in% adjacency_sub_names, "yes", "no"), row.names=rownames(adjacency_de), col.names=c("lc_m"))
+colnames(light_cyan_membership_df) = "lc_m"
+row_annotations = merge(gene_clusters_df, light_cyan_membership_df, by="row.names")
+rownames(row_annotations) = row_annotations$Row.names
+row_annotations = row_annotations %>% mutate(gene_clusters=as.factor(gene_clusters)) %>% 
+mutate(cluster_1=as.factor(gene_clusters == 1)) %>% 
+mutate(cluster_3=as.factor(gene_clusters == 3)) %>% 
+mutate(cluster_9_12_7=as.factor(gene_clusters == 9 | gene_clusters == 12 | gene_clusters == 7)) %>% 
+mutate(cluster_11=as.factor(gene_clusters == 11)) %>% 
+dplyr::select(-Row.names)
+png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.potential_networks.png", width=40, height=30, units="cm", res=300)
+pheatmap(as.dist(1-adjacency_de), annotation_row=row_annotations, main="DE genes for mutant trait, clustered by adjacency matrix")
+dev.off()
+# We can see from the heatmap that there is considerable structure and what looks like some further discrete networks.
+# I would identify 4 potential networks identified by cluster above. cluster 1 is the light cycan module genes
+# then there is cluster 3 and cluster 11 that seem like discrete networks. Finally the clusters 9, 12, and 7 seem
+# interconnected and I think they should be graphed as a single network.
+# To plot up these neworks we will need the adjacency matrix filtered for the DE genes. THis is already saved
+# (/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency_de.non_shaking.RData) and we will need
+# the cluster assignments which we will save now
+save(gene_clusters, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.clusters.RData")
+save.image("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_wgcna.RData")
