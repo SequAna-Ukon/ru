@@ -43,8 +43,17 @@ library(gridExtra)
 library(ggdendro)
 library(ggrepel)
 
+# variable to choose which transcriptome to work with
+# values can be either "NCBI" or "ensembl"
+transcriptome = "ensembl"
+
 # Read in the tx2gene mapping file
-tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
+if (transcriptome == "ensembl") {
+  tx2gene = read.table("/home/humebc/projects/ru/reference/alt_transcriptome/tx2gene.txt", header=TRUE)
+}
+if (transcriptome == "NCBI") {
+  tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
+}
 # Read in the samples meta info
 samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv", header=TRUE)
 samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(time_hr)) %>% mutate(axenic = relevel(axenic, "TRUE"))
@@ -52,7 +61,12 @@ samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(tim
 rownames(samples) = lapply(lapply(str_split(samples$dir_name, "_"), FUN=head, -4), str_c, collapse="_")
 
 # Make a vector that contains the full paths to the abundance.h5 files
-kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/results/kallisto"
+if (transcriptome == "ensembl") {
+  kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/results_alt_ref/kallisto"
+}
+if (transcriptome == "NCBI") {
+  kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/results/kallisto"
+}
 
 files <- file.path(kallisto.base.dir, samples$dir_name, "abundance.h5")
 txi = tximport(files, type = "kallisto", tx2gene = tx2gene)
@@ -135,7 +149,13 @@ geom_point(size=0.5) + geom_text(hjust=0, vjust=0, size=3, color=ifelse(sft_plot
 
 
 threshold_plot = grid.arrange(r_sqr_plot, mean_conn_plot, ncol=2)
-ggsave("nextflow_ru/run_1_nf/run_1_wgcna_threshold_selection.png", plot=threshold_plot, width=20, height=10, units="cm")
+# Make a vector that contains the full paths to the abundance.h5 files
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_1_nf/run_1_wgcna_threshold_selection.ensembl.png", plot=threshold_plot, width=20, height=10, units="cm")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_1_nf/run_1_wgcna_threshold_selection.png", plot=threshold_plot, width=20, height=10, units="cm")
+}
 
 # We will work with the soft threshold power value of 16
 
@@ -146,37 +166,36 @@ ggsave("nextflow_ru/run_1_nf/run_1_wgcna_threshold_selection.png", plot=threshol
 # Let's try enabling the  multithreading
 enableWGCNAThreads(nThreads = 40) # As far as I can tell this doesn't do much
 
-if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/net.RData")){
-    load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/net.RData")
-}else{
-    net = blockwiseModules(wgcna_in, power = 16,
-        TOMType = "unsigned", minModuleSize = 30,
-        reassignThreshold = 0, mergeCutHeight = 0.25,
-        numericLabels = TRUE, pamRespectsDendro = FALSE,
-        saveTOMs = TRUE,
-        saveTOMFileBase = "ru_rna_1",
-        verbose = 3, maxBlockSize=20000
-        )
-    save(net, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/net.RData")
+if (transcriptome == "ensembl") {
+    if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.ensembl.RData")){
+        load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.ensembl.RData")
+    }else{
+        # Make adjacency matrix
+        adjacency = adjacency(wgcna_in, power = 16)
+        # Turn adjacency into topological overlap
+        TOM = TOMsimilarity(adjacency)
+        save(adjacency, TOM, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.ensembl.RData")
+    }
 }
 
-
-
-if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")){
-    load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")
-}else{
-    # Make adjacency matrix
-    adjacency = adjacency(wgcna_in, power = 16)
-    # Turn adjacency into topological overlap
-    TOM = TOMsimilarity(adjacency)
-    save(adjacency, TOM, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")
+if (transcriptome == "NCBI") {
+    if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")){
+        load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")
+    }else{
+        # Make adjacency matrix
+        adjacency = adjacency(wgcna_in, power = 16)
+        # Turn adjacency into topological overlap
+        TOM = TOMsimilarity(adjacency)
+        save(adjacency, TOM, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.RData")
+    }
 }
+
 
 dissTOM = 1-TOM
 
 # Call the hierarchical clustering function
 geneTree = hclust(as.dist(dissTOM), method = "average")
-ggdendrogram(geneTree, rotate = FALSE, size = 2)
+
 
 # We like large modules, so we set the minimum module size relatively high:
 minModuleSize = 30;
@@ -227,8 +246,13 @@ colorOrder = c("grey", standardColors(200));
 moduleLabels = match(moduleColors, colorOrder)-1;
 MEs = mergedMEs;
 # Save module colors and labels for use in subsequent parts
-save(MEs, moduleLabels, moduleColors, geneTree, file = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/network_objs.RData")
 
+if (transcriptome == "ensembl") {
+    save(MEs, moduleLabels, moduleColors, geneTree, file = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/network_objs.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+    save(MEs, moduleLabels, moduleColors, geneTree, file = "/home/humebc/projects/ru/nextflow_ru/run_1_nf/network_objs.RData")
+}
 
 
 #==============================================
@@ -287,9 +311,6 @@ moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
 # MEdarkolivegreen4 5.372115e-01 8.621151e-01
 # MEgrey            1.422931e-06 1.759325e-01
 
-# A good follow up will be to look for the hubgenes in the modules.
-# We could also see if we can plot up some kind o network.
-save.image("/home/humebc/projects/ru/nextflow_ru/run_1_nf/202212301652.RData")
 
 textMatrix = paste(signif(moduleTraitCor, 2), "\n(", signif(moduleTraitPvalue, 1), ")", sep = "")
 
@@ -349,44 +370,20 @@ geneTraitSignificance = geneTraitSignificance %>% select(-rn)
 # Search for the top 10 genes that relate to axenic state
 head(geneTraitSignificance %>% arrange(desc(abs(GS.axenic))),10)
 # Specifically look at the PHATRDRAFT_43365 gene
-geneTraitSignificance["PHATRDRAFT_43365",]
+if (transcriptome == "ensembl") {
+    geneTraitSignificance["Phatr3_J43365",]
+}
+if (transcriptome == "NCBI") {
+    geneTraitSignificance["PHATRDRAFT_43365",]
+}
+
 # > geneTraitSignificance["PHATRDRAFT_43365",]
 #                  GS.axenic p.GS.axenic GS.time_hr p.GS.time_hr
 # PHATRDRAFT_43365 0.5717391 0.001836068 -0.4218402   0.02840287
 
-
-#==============================================
-#
-# Intra module investigation
-#
-#==============================================
-# Let's start by investigating the genes of grey
-# that had the strongest relation to the axenic factor
-module_of_interest = "grey"
-column = match(module_of_interest, modNames)
-moduleGenes = moduleColors==module_of_interest
-
-plotting.df = data.frame(MM=abs(geneModuleMembership[moduleGenes, column]), GS=abs(geneTraitSignificance[moduleGenes, "GS.axenic"]))
-row.names(plotting.df) = row.names(geneModuleMembership)[moduleGenes]
-plotting.df$gene_names = row.names(geneModuleMembership)[moduleGenes]
-
-ggplot(plotting.df, aes(x=MM, y=GS, label=gene_names)) + 
-    geom_point(color=dplyr::case_when(plotting.df$MM > 0.6 & plotting.df$GS > 0.6 ~ "red", TRUE ~ "black")) + 
-    geom_label_repel(aes(label=ifelse(MM > 0.6 & GS > 0.6, gene_names, ""))) + 
-    xlab(paste("Module Membership in", module_of_interest, "module")) + ylab("Gene significance for axenic") + 
-    ggtitle("Module membership vs. gene significance\n")
-
-
-ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/grey_MM_GS_scatter.png")
-
-# The following genes in the grey module have module membership and gene significance above 0.6
-plotting.df %>% dplyr::filter(MM>0.6, GS>0.6)
-# > plotting.df %>% dplyr::filter(MM>0.6, GS>0.6)
-#                         MM        GS       gene_names
-# PHATRDRAFT_43020 0.6372533 0.7043898 PHATRDRAFT_43020
-# PHATRDRAFT_47597 0.8272627 0.7105847 PHATRDRAFT_47597
-# PHATRDRAFT_48554 0.7060598 0.6251054 PHATRDRAFT_48554
-# PHATRDRAFT_48976 0.6371801 0.6174472 PHATRDRAFT_48976
+# > geneTraitSignificance["Phatr3_J43365",]
+#               GS.axenic p.GS.axenic GS.time_hr p.GS.time_hr
+# Phatr3_J43365 0.5699869 0.001910303 -0.4253445   0.02697886
 
 
 # Find the genes with the highest connectivity (i.e. hub gene of the module)
