@@ -18,16 +18,31 @@ library(ggvenn)
 
 # If the script has already been run through then you can use this load.
 # load(file = "nextflow_ru/run_2_nf/run_1_data.RData")
+# load(file = "nextflow_ru/run_2_nf/run_1_data.ensembl.RData")
 
-tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
+# variable to choose which transcriptome to work with
+# values can be either "NCBI" or "ensembl"
+transcriptome = "ensembl"
+
+if (transcriptome == "ensembl") {
+  tx2gene = read.table("/home/humebc/projects/ru/reference/alt_transcriptome/tx2gene.txt", header=TRUE)
+}
+if (transcriptome == "NCBI") {
+  tx2gene = read.table("/home/humebc/projects/ru/reference/tx2gene.txt", header=TRUE)
+}
 samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_2_nf/samples_run_2.csv", header=TRUE)
 samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(time_hr), shaking = as.factor(shaking), cell_line = as.factor(cell_line)) %>% mutate(axenic = relevel(axenic, "TRUE"))
 # Create a column that is 'mutant' so that we can easily do the comparisons that ru made for the shaking samples
 samples = samples %>% mutate(mutant = as.factor(case_when(cell_line == "WT" ~ FALSE, TRUE ~ TRUE)))
-
+rownames(samples) = samples$dir_name
 
 # Make a vector that contains the full paths to the abundance.h5 files
-kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_2_nf/results/kallisto"
+if (transcriptome == "ensembl") {
+  kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_2_nf/results_alt_ref/kallisto"
+}
+if (transcriptome == "NCBI") {
+  kallisto.base.dir = "/home/humebc/projects/ru/nextflow_ru/run_2_nf/results/kallisto"
+}
 
 
 # There are two initial results that we want to recapitulate
@@ -87,7 +102,14 @@ ggplot(plotting_df_shaking, aes(fill=up_down, y=num_genes, x=contrast_time, labe
     geom_bar(position="stack", stat="identity") + geom_text(size = 10, position = position_stack(vjust = 0.5)) + theme(axis.text=element_text(size=20),
         axis.title=element_text(size=20), plot.title = element_text(size = 40), legend.text = element_text(size=25)) + ggtitle("WT vs Mutant shaking") +
   scale_fill_manual(values=c("up" = "#404040", "down" = "#AFABAB"))
-ggsave("nextflow_ru/run_2_nf/rna_2_shaking_stacked_bars.filtered.png")
+
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_stacked_bars.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_stacked_bars.filtered.png")
+}
+
 
 
 
@@ -126,7 +148,13 @@ ggplot(pcaData_shaking, aes(PC1, PC2, color=cell_line, shape=time_hr)) +
   ylab(paste0("PC2: ",percentVar_shaking[2],"% variance")) + 
   coord_fixed() + ggtitle("2nd RNA-seq shaking PCA") + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000"))
 
-ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca.filtered.png")
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca.filtered.png")
+}
+
 # This PCA looks quite different to the one that Ru produced.
 
 
@@ -194,7 +222,13 @@ ggplot(plotting_df_non_shaking, aes(fill=up_down_non_shaking, y=num_genes_non_sh
         axis.title=element_text(size=20), plot.title = element_text(size = 40), legend.text = element_text(size=25), axis.text.x = element_text(angle = -45, vjust=-0/5, hjust=0)) + ggtitle("non shaking") +
         scale_fill_manual(values=c("up" = "#404040", "down" = "#AFABAB"))
 
-ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_stacked_bars.filtered.png")
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_stacked_bars.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_stacked_bars.filtered.png")
+}
+
 
 ### NON-SHAKING PCA 
 # Filter down the samples 
@@ -236,9 +270,21 @@ ggplot(pcaData_non_shaking, aes(PC1, PC2, color=cell_line, shape=treatment)) +
   ylab(paste0("PC2: ",percentVar_non_shaking[2],"% variance")) + 
   coord_fixed() + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000")) + ggtitle("2nd RNA-seq non-shaking PCA")
 
-ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.filtered.png")
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.filtered.png")
+}
 
-save.image(file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_nd.RData")
+
+if (transcriptome == "ensembl") {
+  save.image(file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_nd.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+  save.image(file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_nd.RData")
+}
+
 
 
 
@@ -280,6 +326,14 @@ dds_ax_vs_co = DESeq(dds_ax_vs_co, minReplicatesForReplace=3)
 # WT_48hBAX3 
 #         97
 
+# > assay(dds_ax_vs_co)["Phatr3_J43365",]
+#     WT_0h1     WT_0h2     WT_0h3   WT_24hB1   WT_24hB2   WT_24hB3 WT_24hBAX1 
+#         99         94         46         53         51         47         46 
+# WT_24hBAX2 WT_24hBAX3   WT_48hB1   WT_48hB2   WT_48hB3 WT_48hBAX1 WT_48hBAX2 
+#         17         29       8355        157         71         81         67 
+# WT_48hBAX3 
+#         95
+
 res_ax_vs_co = results(dds_ax_vs_co)
 
 res_ax_vs_co = as.data.frame(res_ax_vs_co)
@@ -292,21 +346,33 @@ res_ax_vs_co.filtered = res_ax_vs_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::
 # The pval and padj have been set to NA for 43365.
 # According to the docs this is something to do with an extreme count outlier
 # See above. Now we have fixed this.
-res_ax_vs_co["PHATRDRAFT_43365",]
-# > res_ax_vs_co["PHATRDRAFT_43365",]
-#                  baseMean log2FoldChange     lfcSE      stat   pvalue      padj
-# PHATRDRAFT_43365 67.16041      0.2730666 0.3610843 0.7562406 0.449505 0.6615257
-# The gene is no longer DE in the non-shaking samples!
+if (transcriptome == "ensembl") {
+  res_ax_vs_co["Phatr3_J43365",]
+  # > res_ax_vs_co["Phatr3_J43365",]
+  #             baseMean log2FoldChange    lfcSE      stat    pvalue      padj
+  # Phatr3_J43365 66.62223      0.2538437 0.351874 0.7214049 0.4706604 0.6768185
+}
+if (transcriptome == "NCBI") {
+  res_ax_vs_co["PHATRDRAFT_43365",]
+  # > res_ax_vs_co["PHATRDRAFT_43365",]
+  #                  baseMean log2FoldChange     lfcSE      stat   pvalue      padj
+  # PHATRDRAFT_43365 67.16041      0.2730666 0.3610843 0.7562406 0.449505 0.6615257
+  # The gene is no longer DE in the non-shaking samples!
+}
 
-# TODO have a look at the normalized gene counts and compare them to the RNA-seq 1 experiment.
-# We should be able to see the same sorts of changes in the numbers
 
 # we want to see if the other genes in the DE network that we created from the 
 # 1st RNA-seq run are found in the DE genes of this study. This will be achieved
 # by the Venn approach hopefully. See below.
 
 # save this df for use later
-save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
+if (transcriptome == "ensembl") {
+  save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+  save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
+}
+
 
 ########### Mutant DE ###############
 # Get the mutant DE genes and make a comparison of the overlap to
@@ -336,32 +402,61 @@ res_mutant_vs_WT_co = as.data.frame(res_mutant_vs_WT_co)
 res_mutant_vs_WT_co.filtered = res_mutant_vs_WT_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
 # > dim(res_mutant_vs_WT_co.filtered)
 # [1] 694   6
-res_mutant_vs_WT_co.filtered["PHATRDRAFT_43365",]
-# > res_mutant_vs_WT_co.filtered["PHATRDRAFT_43365",]
-#    baseMean log2FoldChange lfcSE stat pvalue padj
-# NA       NA             NA    NA   NA     NA   NA
-res_mutant_vs_WT_co["PHATRDRAFT_43365",]
-# > res_mutant_vs_WT_co["PHATRDRAFT_43365",]
-#                  baseMean log2FoldChange     lfcSE     stat    pvalue      padj
-# PHATRDRAFT_43365 159.3906       1.073634 0.6981413 1.537846 0.1240863 0.4490131
+if (transcriptome == "ensembl") {
+  res_mutant_vs_WT_co.filtered["Phatr3_J43365",]
+  # > res_mutant_vs_WT_co.filtered["Phatr3_J43365",]
+  # baseMean log2FoldChange lfcSE stat pvalue padj
+  # NA       NA             NA    NA   NA     NA   NA
+  
+  res_mutant_vs_WT_co["Phatr3_J43365",]
+  # > res_mutant_vs_WT_co["Phatr3_J43365",]
+  #  > res_mutant_vs_WT_co["Phatr3_J43365",]
+  #               baseMean log2FoldChange     lfcSE     stat    pvalue      padj
+  # Phatr3_J43365 156.3138       1.071689 0.7111845 1.506908 0.1318343 0.4635156
 
-# The PHATRDRAFT_43365 is not differentially expressed between the mutants and the WT
-# This may be believable, because both the mutants and the WT are co-cultured.
-# However, we would expect the network that we identified in the 1st RNA-seq run
-# to be knocked out. I.e. although the PHATRDRAFT_43365 transcript may be expressed
-# its protein should be non effective and therefore the network should be knocked out.
-
-assay(dds_mutant_vs_WT_co)["PHATRDRAFT_43365",]
-# > assay(dds_mutant_vs_WT_co)["PHATRDRAFT_43365",]
+  assay(dds_mutant_vs_WT_co)["Phatr3_J43365",]
+#   >   assay(dds_mutant_vs_WT_co)["Phatr3_J43365",]
 # A7_24hB1 A7_24hB2 A7_24hB3 A7_48hB1 A7_48hB2 A7_48hB3 A8_24hB1 A8_24hB2 
-#      166      165      227      737     1012      773       12       16 
+#      168      163      226      728     1004      754        8       15 
 # A8_24hB3 A8_48hB1 A8_48hB2 A8_48hB3 WT_24hB1 WT_24hB2 WT_24hB3 WT_48hB1 
-#       20      126       60       28       53       52       47     8509 
+#       19      124       55       28       53       51       47     8355 
 # WT_48hB2 WT_48hB3 
-#      163       71
+#      157       71 
+}
+if (transcriptome == "NCBI") {
+  res_mutant_vs_WT_co.filtered["PHATRDRAFT_43365",]
+  # > res_mutant_vs_WT_co.filtered["PHATRDRAFT_43365",]
+  #    baseMean log2FoldChange lfcSE stat pvalue padj
+  # NA       NA             NA    NA   NA     NA   NA
+  res_mutant_vs_WT_co["PHATRDRAFT_43365",]
+  # > res_mutant_vs_WT_co["PHATRDRAFT_43365",]
+  #                  baseMean log2FoldChange     lfcSE     stat    pvalue      padj
+  # PHATRDRAFT_43365 159.3906       1.073634 0.6981413 1.537846 0.1240863 0.4490131
+
+  # The PHATRDRAFT_43365 is not differentially expressed between the mutants and the WT
+  # This may be believable, because both the mutants and the WT are co-cultured.
+  # However, we would expect the network that we identified in the 1st RNA-seq run
+  # to be knocked out. I.e. although the PHATRDRAFT_43365 transcript may be expressed
+  # its protein should be non effective and therefore the network should be knocked out.
+
+  assay(dds_mutant_vs_WT_co)["PHATRDRAFT_43365",]
+  # > assay(dds_mutant_vs_WT_co)["PHATRDRAFT_43365",]
+  # A7_24hB1 A7_24hB2 A7_24hB3 A7_48hB1 A7_48hB2 A7_48hB3 A8_24hB1 A8_24hB2 
+  #      166      165      227      737     1012      773       12       16 
+  # A8_24hB3 A8_48hB1 A8_48hB2 A8_48hB3 WT_24hB1 WT_24hB2 WT_24hB3 WT_48hB1 
+  #       20      126       60       28       53       52       47     8509 
+  # WT_48hB2 WT_48hB3 
+  #      163       71
+}
+
 
 # save this df for use later
-save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+if (transcriptome == "ensembl") {
+  save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+  save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+}
 
 
 # There is one more combination of samples to investigate and that is the
@@ -371,7 +466,7 @@ save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/ru
 samples_mutant_co_vs_WT_ax = samples %>% dplyr::filter(shaking!="TRUE" & !(cell_line=="WT" & axenic=="FALSE"))
 
 files_mutant_co_vs_WT_ax <- file.path(kallisto.base.dir, samples_mutant_co_vs_WT_ax$dir_name, "abundance.h5")
-
+file.exists(files_mutant_co_vs_WT_ax)
 # Finally we can use tximport to read in the abundance tables
 # and perform the normalizations
 txi_mutant_co_vs_WT_ax = tximport(files_mutant_co_vs_WT_ax, type = "kallisto", tx2gene = tx2gene)
@@ -391,50 +486,99 @@ res_mutant_co_vs_WT_ax = results(dds_mutant_co_vs_WT_ax)
 res_mutant_co_vs_WT_ax = as.data.frame(res_mutant_co_vs_WT_ax)
 
 res_mutant_co_vs_WT_ax.filtered = res_mutant_co_vs_WT_ax %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
+
 # > dim(res_mutant_co_vs_WT_ax.filtered)
 # [1] 1091    6
 # This shows that there is a huge number of DE genes between the mutant co-cultured
-# compared to the WT axenic which is not what we expected to see.
+# compared to the WT axenic
 
-res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
-# > res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
-#    baseMean log2FoldChange lfcSE stat pvalue padj
-# NA       NA             NA    NA   NA     NA   NA
-res_mutant_co_vs_WT_ax["PHATRDRAFT_43365",]
-# > res_mutant_co_vs_WT_ax["PHATRDRAFT_43365",]
-#                  baseMean log2FoldChange     lfcSE     stat      pvalue       padj
-# PHATRDRAFT_43365 157.4127       1.689483 0.6136731 2.753066 0.005903995 0.03726966
 
-head(res_mutant_co_vs_WT_ax.filtered)
-# > head(res_mutant_co_vs_WT_ax.filtered)
-#                   baseMean log2FoldChange     lfcSE      stat        pvalue           padj
-# PHATRDRAFT_51129 7811.1126     -11.614298 0.2200020 -52.79178  0.000000e+00   0.000000e+00
-# PHATRDRAFT_37231 1535.1849       5.457324 0.1997412  27.32197 2.325922e-164  1.181220e-160
-# PHATRDRAFT_38705  383.0974     -12.620949 0.4842504 -26.06286 9.619450e-150  3.256825e-146
-# PHATRDRAFT_48286  270.0884     -12.116128 0.4953144 -24.46149 3.797690e-132  9.643285e-129
-# PHATRDRAFT_46458  406.5408      -5.287903 0.2316197 -22.83010 2.304168e-115  4.680687e-112
-# PHATRDRAFT_22332  229.1821     -11.075503 0.5082598 -21.79103 2.822602e-105  4.778195e-102
+if (transcriptome == "ensembl") {
+  res_mutant_co_vs_WT_ax.filtered["Phatr3_J43365",]
+  # > res_mutant_co_vs_WT_ax.filtered["Phatr3_J43365",]
+  #    baseMean log2FoldChange lfcSE stat pvalue padj
+  # NA       NA             NA    NA   NA     NA   NA
 
-# There are HUGE differences between the mutants and the wild types
+  res_mutant_co_vs_WT_ax["Phatr3_J43365",]
+  # >   res_mutant_co_vs_WT_ax["Phatr3_J43365",]
+  #               baseMean log2FoldChange     lfcSE     stat      pvalue       padj
+  # Phatr3_J43365 154.8594       1.670045 0.6187592 2.699023 0.006954342 0.04187387
+  
 
-assay(dds_mutant_co_vs_WT_ax)["PHATRDRAFT_43365",]
-# > assay(dds_mutant_co_vs_WT_ax)["PHATRDRAFT_43365",]
-#     A7_0h1     A7_0h2     A7_0h3   A7_24hB1   A7_24hB2   A7_24hB3   A7_48hB1 
-#        156        262        157        166        165        227        737 
-#   A7_48hB2   A7_48hB3     A8_0h1     A8_0h2     A8_0h3   A8_24hB1   A8_24hB2 
-#       1012        773         15         20          8         12         16 
-#   A8_24hB3   A8_48hB1   A8_48hB2   A8_48hB3     WT_0h1     WT_0h2     WT_0h3 
-#         20        126         60         28         97         94         46 
-# WT_24hBAX1 WT_24hBAX2 WT_24hBAX3 WT_48hBAX1 WT_48hBAX2 WT_48hBAX3 
-#         45         17         29         81         69         97
+  head(res_mutant_co_vs_WT_ax.filtered)
+  #   > head(res_mutant_co_vs_WT_ax.filtered)
+  #                 baseMean log2FoldChange     lfcSE      stat        pvalue           padj
+  # Phatr3_J38705   383.7108     -12.623942 0.4843533 -26.06350 9.458383e-150  1.038530e-145
+  # Phatr3_J48286   268.3271     -12.107392 0.4956109 -24.42923 8.368131e-132  4.594104e-128
+  # Phatr3_EG01364  150.1012      -6.320185 0.2600817 -24.30077 1.923989e-130  7.041801e-127
+  # Phatr3_EG01401  170.8144      -6.721899 0.2908873 -23.10826 3.824249e-118  1.049756e-114
+  # Phatr3_J29456  7347.8861     -11.118537 0.4880355 -22.78223 6.879831e-115  1.510811e-111
+  # Phatr3_J46458   397.8250      -5.252976 0.2336618 -22.48111 6.353641e-112  1.162716e-108
 
-# save this df for use later
-save(res_mutant_co_vs_WT_ax.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_co_vs_WT_ax.filtered.RData")
+  # There are HUGE differences between the mutants and the wild types
 
-# I then want to do and overlap comparison with the 3 comparisons above and of the DE genes from the 1st RNA-seq.
-# Load in the de_genes from the 1st RNA-seq run
-load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
-head(de_genes)
+  assay(dds_mutant_co_vs_WT_ax)["Phatr3_J43365",]
+  # >   assay(dds_mutant_co_vs_WT_ax)["Phatr3_J43365",]
+  #     A7_0h1     A7_0h2     A7_0h3   A7_24hB1   A7_24hB2   A7_24hB3   A7_48hB1 
+  #        153        260        155        168        163        226        728 
+  #   A7_48hB2   A7_48hB3     A8_0h1     A8_0h2     A8_0h3   A8_24hB1   A8_24hB2 
+  #       1004        754         17         18          8          8         15 
+  #   A8_24hB3   A8_48hB1   A8_48hB2   A8_48hB3     WT_0h1     WT_0h2     WT_0h3 
+  #         19        124         55         28         99         94         46 
+  # WT_24hBAX1 WT_24hBAX2 WT_24hBAX3 WT_48hBAX1 WT_48hBAX2 WT_48hBAX3 
+  #         46         17         29         81         67         95
+
+  # save this df for use later
+  save(res_mutant_co_vs_WT_ax.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_co_vs_WT_ax.filtered.ensembl.RData")
+
+  # I then want to do and overlap comparison with the 3 comparisons above and of the DE genes from the 1st RNA-seq.
+  # Load in the de_genes from the 1st RNA-seq run
+  load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.ensembl.RData")
+  head(de_genes)
+
+}
+if (transcriptome == "NCBI") {
+  res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
+  # > res_mutant_co_vs_WT_ax.filtered["PHATRDRAFT_43365",]
+  #    baseMean log2FoldChange lfcSE stat pvalue padj
+  # NA       NA             NA    NA   NA     NA   NA
+  res_mutant_co_vs_WT_ax["PHATRDRAFT_43365",]
+  # > res_mutant_co_vs_WT_ax["PHATRDRAFT_43365",]
+  #                  baseMean log2FoldChange     lfcSE     stat      pvalue       padj
+  # PHATRDRAFT_43365 157.4127       1.689483 0.6136731 2.753066 0.005903995 0.03726966
+
+  head(res_mutant_co_vs_WT_ax.filtered)
+  # > head(res_mutant_co_vs_WT_ax.filtered)
+  #                   baseMean log2FoldChange     lfcSE      stat        pvalue           padj
+  # PHATRDRAFT_51129 7811.1126     -11.614298 0.2200020 -52.79178  0.000000e+00   0.000000e+00
+  # PHATRDRAFT_37231 1535.1849       5.457324 0.1997412  27.32197 2.325922e-164  1.181220e-160
+  # PHATRDRAFT_38705  383.0974     -12.620949 0.4842504 -26.06286 9.619450e-150  3.256825e-146
+  # PHATRDRAFT_48286  270.0884     -12.116128 0.4953144 -24.46149 3.797690e-132  9.643285e-129
+  # PHATRDRAFT_46458  406.5408      -5.287903 0.2316197 -22.83010 2.304168e-115  4.680687e-112
+  # PHATRDRAFT_22332  229.1821     -11.075503 0.5082598 -21.79103 2.822602e-105  4.778195e-102
+
+  # There are HUGE differences between the mutants and the wild types
+
+  assay(dds_mutant_co_vs_WT_ax)["PHATRDRAFT_43365",]
+  # > assay(dds_mutant_co_vs_WT_ax)["PHATRDRAFT_43365",]
+  #     A7_0h1     A7_0h2     A7_0h3   A7_24hB1   A7_24hB2   A7_24hB3   A7_48hB1 
+  #        156        262        157        166        165        227        737 
+  #   A7_48hB2   A7_48hB3     A8_0h1     A8_0h2     A8_0h3   A8_24hB1   A8_24hB2 
+  #       1012        773         15         20          8         12         16 
+  #   A8_24hB3   A8_48hB1   A8_48hB2   A8_48hB3     WT_0h1     WT_0h2     WT_0h3 
+  #         20        126         60         28         97         94         46 
+  # WT_24hBAX1 WT_24hBAX2 WT_24hBAX3 WT_48hBAX1 WT_48hBAX2 WT_48hBAX3 
+  #         45         17         29         81         69         97
+
+  # save this df for use later
+  save(res_mutant_co_vs_WT_ax.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_co_vs_WT_ax.filtered.RData")
+
+  # I then want to do and overlap comparison with the 3 comparisons above and of the DE genes from the 1st RNA-seq.
+  # Load in the de_genes from the 1st RNA-seq run
+  load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
+  head(de_genes)
+
+}
 de_l = list(
   first_de = rownames(de_genes),
   WT_ax_vs_co_de = rownames(res_ax_vs_co.filtered),
@@ -448,16 +592,23 @@ ggvenn(
   fill_color = c("#D721BB", "#144BD5", "#3CCA23", "#21CBCA"),
   stroke_size = 0.5, set_name_size = 4
   ) + theme_bw() + xlim(c(-2.5,3.25))
-ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/de_genes.Venn.png")
-# This is not a good result.
-# I would expect that the DE genes of the WT_ax_vs_co_de_list and mut_vs_vt_co_de_list comparisons
-# to have a large overlap
-# That is, the axenic state difference (i.e. WT co vs WT ax) would be the same as the
-# mutant vs WT (co-cultured) difference. But there is only a very small over lap.
-# I would also expect there to be an almost complete overlap of the DE genes of 
-# the first analysis with those of the second ax vs co de list. But there is 0 overlap! 
-# This second comparison is essentially a control for the experiment.
 
+if (transcriptome == "ensembl") {
+  ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/de_genes.Venn.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/de_genes.Venn.png")
 
-# I don't see any point in pursuing the WGCNA analysis as there is no way that the network
-# is maintained as the fist_de_list vs WT_ax_vs_co_de_list has 0 overlap.
+  # This is not a good result.
+  # I would expect that the DE genes of the WT_ax_vs_co_de_list and mut_vs_vt_co_de_list comparisons
+  # to have a large overlap
+  # That is, the axenic state difference (i.e. WT co vs WT ax) would be the same as the
+  # mutant vs WT (co-cultured) difference. But there is only a very small over lap.
+  # I would also expect there to be an almost complete overlap of the DE genes of 
+  # the first analysis with those of the second ax vs co de list. But there is 0 overlap! 
+  # This second comparison is essentially a control for the experiment.
+
+  # I don't see any point in pursuing the WGCNA analysis as there is no way that the network
+  # is maintained as the fist_de_list vs WT_ax_vs_co_de_list has 0 overlap.
+}
+

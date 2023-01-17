@@ -13,9 +13,20 @@ library(ggrepel)
 library(igraph)
 library("scales")
 
+# variable to choose which transcriptome to work with
+# values can be either "NCBI" or "ensembl"
+transcriptome = "ensembl"
+
 # The first network I want to investigate is the lightcyan network
-load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/light_cyan_module_genes_names.non_shaking.RData")
-load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency.non_shaking.RData")
+if (transcriptome == "ensembl") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/light_cyan_module_genes_names.non_shaking.ensembl.RData")
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency.non_shaking.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/light_cyan_module_genes_names.non_shaking.RData")
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/adjacency.non_shaking.RData")
+}
+
 # head(module_gene_names)
 # head(adjacency)
 
@@ -47,7 +58,13 @@ net <- graph_from_adjacency_matrix(adjacency_sub, mode="undirected", weighted=TR
 E(net)$width <- E(net)$weight *0.5
 V(net)$size <- 7
 V(net)$color = ifelse(names(V(net)) == "PHATRDRAFT_43365", "red", "white")
-png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.png", height=10, width=10, res=600, units="cm")
+if (transcriptome == "ensembl") {
+    png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.ensembl.png", height=10, width=10, res=600, units="cm")
+}
+if (transcriptome == "NCBI") {
+    png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.png", height=10, width=10, res=600, units="cm")
+}
+
 # See section 5.1 for plotting option
 # https://kateto.net/networks-r-igraph
 plot(net, vertex.label=NA, main="lightcyan module module-trait mutant=0.99")
@@ -55,7 +72,14 @@ dev.off()
 
 # This is the list of the genes in this network:
 adjacency_sub_names = rownames(adjacency_sub)
-save(adjacency_sub_names, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.RData")
+
+if (transcriptome == "ensembl") {
+    save(adjacency_sub_names, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+    save(adjacency_sub_names, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcycan.network.gene.names.RData")
+}
+
 
 # Now view the network of the top 10 connectivity genes
 top_10_names = rownames(head(connections, 10))
@@ -64,7 +88,14 @@ net_top_10 <- graph_from_adjacency_matrix(top_10_adj, mode="undirected", weighte
 E(net_top_10)$width <- E(net_top_10)$weight *0.5
 V(net_top_10)$size <- 7
 V(net_top_10)$color = ifelse(names(V(net_top_10)) == "PHATRDRAFT_43365", "red", "white")
-png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top10.png", height=10, width=10, res=600, units="cm")
+
+if (transcriptome == "ensembl") {
+    png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top10.ensembl.png", height=10, width=10, res=600, units="cm")
+}
+if (transcriptome == "NCBI") {
+    png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top10.png", height=10, width=10, res=600, units="cm")
+}
+
 # See section 5.1 for plotting option
 # https://kateto.net/networks-r-igraph
 plot(net_top_10, vertex.label=NA)
@@ -88,7 +119,13 @@ vert_df = as_data_frame(net, what="vertices")
 head(vert_df)
 
 # Load the Gene Significance df
-load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
+if (transcriptome == "ensembl") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.ensembl.RData")
+}
+if (transcriptome == "NCBI") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
+}
+
 head(geneTraitSignificance)
 V(net)$x
 plot(net, layout=layout.auto)
@@ -108,10 +145,30 @@ net_edge_df = data.frame(from=edge_df$from, to=edge_df$to, from.x=from.x, from.y
 
 # It is not possible to have a separate legend for each of the size attributes (i.e. the one used for the points and the one used for the lines)
 # https://stackoverflow.com/questions/14647794/using-multiple-size-scales-in-a-ggplot
-ggplot() + 
+
+
+
+if (transcriptome == "ensembl") {
+    ggplot() + 
+    geom_segment(data=net_edge_df, aes(x=from.x,xend = to.x, y=from.y,yend = to.y, size=weight), colour="grey") + 
+    geom_point(data=net_df_coords, color="black", fill=net_df_coords$color, shape=21, size=rescale(net_df_coords$GS, c(10,20)), aes(x=x, y=y)) + 
+    geom_text(data=net_df_coords, aes(label=name, x=x, y=y)) +
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+            axis.text = element_blank()) + xlab("") + ylab("") +
+    guides(size = guide_legend("adjacency score (weight)")) + xlim(c(-6, 4)) +
+    ggtitle("Network of lightcyan module according to their adjacency scores (connections >0.5 shown; > 3 connections only)")
+    ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.ggplot.ensembl.png", height=50, width=40, units="cm")
+}
+if (transcriptome == "NCBI") {
+    ggplot() + 
 geom_segment(data=net_edge_df, aes(x=from.x,xend = to.x, y=from.y,yend = to.y, size=weight), colour="grey") + 
 geom_point(data=net_df_coords, color="black", fill=net_df_coords$color, shape=21, size=rescale(net_df_coords$GS, c(10,20)), aes(x=x, y=y)) + 
-geom_text(data=net_df_coords, aes(label=name, x=x, y=y)) + 
+geom_text(data=net_df_coords, aes(label=name, x=x, y=y)) +
 theme_bw() + 
 theme(panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -121,8 +178,9 @@ theme(panel.grid.major = element_blank(),
         axis.text = element_blank()) + xlab("") + ylab("") +
 guides(size = guide_legend("adjacency score (weight)")) + xlim(c(-4.5, 4.5)) +
 ggtitle("Network of lightcyan module according to their adjacency scores (connections >0.5 shown; > 3 connections only)")
+    ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.ggplot.png", height=50, width=40, units="cm")
+}
 
-ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.ggplot.png", height=50, width=40, units="cm")
 
 ##################
 
@@ -155,27 +213,47 @@ net_edge_df_top_10 = data.frame(from=edge_df_top_10$from, to=edge_df_top_10$to, 
 
 # It is not possible to have a separate legend for each of the size attributes (i.e. the one used for the points and the one used for the lines)
 # https://stackoverflow.com/questions/14647794/using-multiple-size-scales-in-a-ggplot
-ggplot() + 
-geom_segment(data=net_edge_df_top_10, aes(x=from.x,xend = to.x, y=from.y,yend = to.y, size=weight), colour="grey") + 
-geom_point(data=net_df_coords_to_10, color="black", fill=net_df_coords_to_10$color, shape=21, size=rescale(net_df_coords_to_10$GS, c(10,20)), aes(x=x, y=y)) + 
-geom_text(data=net_df_coords_to_10, aes(label=name, x=x, y=y)) + 
-theme_bw() + 
-theme(panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    axis.ticks = element_blank(),
-        axis.text = element_blank()) + xlab("") + ylab("") +
-guides(size = guide_legend("adjacency score (weight)")) + xlim(c(-4.5, -1.25)) +
-ggtitle("Network of lightcyan module according to their adjacency scores (connections >0.5 shown; > 3 connections only)")
+if (transcriptome == "ensembl") {
+    ggplot() + 
+    geom_segment(data=net_edge_df_top_10, aes(x=from.x,xend = to.x, y=from.y,yend = to.y, size=weight), colour="grey") + 
+    geom_point(data=net_df_coords_to_10, color="black", fill=net_df_coords_to_10$color, shape=21, size=rescale(net_df_coords_to_10$GS, c(10,20)), aes(x=x, y=y)) + 
+    geom_text(data=net_df_coords_to_10, aes(label=name, x=x, y=y)) + 
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+            axis.text = element_blank()) + xlab("") + ylab("") +
+    guides(size = guide_legend("adjacency score (weight)")) + xlim(c(0.2, 1.7)) +
+    ggtitle("Network of lightcyan module according to their adjacency scores (connections >0.5 shown; > 3 connections only)")
+    ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top_10.ggplot.ensembl.png", height=50, width=40, units="cm")
+}
+if (transcriptome == "NCBI") {
+    ggplot() + 
+    geom_segment(data=net_edge_df_top_10, aes(x=from.x,xend = to.x, y=from.y,yend = to.y, size=weight), colour="grey") + 
+    geom_point(data=net_df_coords_to_10, color="black", fill=net_df_coords_to_10$color, shape=21, size=rescale(net_df_coords_to_10$GS, c(10,20)), aes(x=x, y=y)) + 
+    geom_text(data=net_df_coords_to_10, aes(label=name, x=x, y=y)) + 
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+            axis.text = element_blank()) + xlab("") + ylab("") +
+    guides(size = guide_legend("adjacency score (weight)")) + xlim(c(-4.5, -1.25)) +
+    ggtitle("Network of lightcyan module according to their adjacency scores (connections >0.5 shown; > 3 connections only)")
+    ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top_10.ggplot.png", height=50, width=40, units="cm")
+}
 
-ggsave("/home/humebc/projects/ru/nextflow_ru/run_2_nf/lightcyan.non_shaking.network.top_10.ggplot.png", height=50, width=40, units="cm")
 
 ##########################
 
 # Networks of the mutant DE genes
 
 #########################
+
+# NB I have stopped here for the ensembl version of the analysis as the network vizualizations are not particularly helpful
 
 # See the run_2_wgcna.r script for how we identified a set of genes that likely represent networks
 # We have save the cluster identities

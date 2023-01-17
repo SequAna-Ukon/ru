@@ -10,3 +10,5 @@ work
 results
 nextflow.config
 data_upload_for_ru
+nextflow_ru/run_1_nf/results_alt_ref/
+nextflow_ru/run_2_nf/results_alt_ref/
