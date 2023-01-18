@@ -26,6 +26,7 @@ library(DESeq2)
 library("pheatmap")
 library(ggplot2)
 library(ggvenn)
+library(ggrepel)
 
 # variable to choose which transcriptome to work with
 # values can be either "NCBI" or "ensembl"
@@ -108,6 +109,9 @@ for (time in times){
     down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -1 & padj < 0.05)
     contrast_time = append(contrast_time, time); num_genes = append(num_genes, dim(down)[[1]]); up_down = append(up_down, "down");
     
+    de_genes_up_and_down = as.data.frame(res) %>% dplyr::filter(abs(log2FoldChange) > 1 & padj < 0.05)
+
+    write.csv(de_genes_up_and_down, file.path("/home/humebc/projects/ru/nextflow_ru/run_1_nf/", paste0("de_genes_", time, ".csv")))
     # Collect the differentially expressed genes
     de_genes[[as.character(time)]] = c(rownames(up), rownames(down))
 }
@@ -150,7 +154,7 @@ dds_all_samples <- dds_all_samples[keep_all_samples,]
 dds_all_samples = DESeq(dds_all_samples)
 
 vsd_all_samples <- vst(dds_all_samples, blind=FALSE)
-rld_all_samples <- rlog(dds_all_samples, blind=FALSE)
+# rld_all_samples <- rlog(dds_all_samples, blind=FALSE)
 head(assay(vsd_all_samples), 3)
 
 pcaData = plotPCA(vsd_all_samples, intgroup=c("time_hr", "axenic"), returnData=TRUE)
@@ -227,6 +231,8 @@ de_genes_unique = de_genes_unique[de_genes_unique %in% rownames(vsd_assay_all_sa
 
 # Then a heat map of all DE genes across all samples
 heat = pheatmap(vsd_assay_all_samples[de_genes_unique,], cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=TRUE, scale="row", annotation_col = annotation_df_all_samples)
+
+
 if (transcriptome == "ensembl") {
   ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_all_DE.ensembl.png", heat)
 }
@@ -319,36 +325,49 @@ head(res.df, 20)
 
 # For ensembl
 # > head(res.df, 20)
-#                   baseMean log2FoldChange      lfcSE      stat       pvalue         padj
-# Phatr3_J43365  1142.664589      3.8743070 0.46421205  8.345985 7.062248e-17 7.739517e-13
-# Phatr3_J48554  1957.068391      4.4197978 0.64539341  6.848223 7.477312e-12 4.097193e-08
-# Phatr3_J46195  1117.238681     -0.2820122 0.04234246 -6.660269 2.733266e-11 9.984622e-08
-# Phatr3_EG00672  605.416667      0.8617613 0.14225560  6.057837 1.379637e-09 3.023889e-06
-# Phatr3_J48069  2106.749044      1.1508417 0.18946676  6.074109 1.246781e-09 3.023889e-06
-# Phatr3_J47845  3072.316158      0.1805028 0.03211538  5.620447 1.904635e-08 3.478815e-05
-# Phatr3_J50288  7398.141197      1.1232231 0.21375730  5.254665 1.482938e-07 2.321645e-04
-# Phatr3_EG02577    5.041134      5.7157040 1.13989199  5.014251 5.324059e-07 7.293295e-04
-# Phatr3_J46647  1614.509578      0.3860048 0.07939221  4.861998 1.162065e-06 1.415008e-03
-# Phatr3_J55070  1480.209350      1.9432164 0.41161462  4.720960 2.347335e-06 2.572445e-03
-# Phatr3_J43073   943.647334      0.2696045 0.05788282  4.657763 3.196636e-06 2.783074e-03
-# Phatr3_J44100  1604.097640      0.7133686 0.15249852  4.677872 2.898672e-06 2.783074e-03
-# Phatr3_J48558  1572.467838      1.1094759 0.23853958  4.651119 3.301393e-06 2.783074e-03
-# Phatr3_EG01376  104.012672      4.2444519 0.98087297  4.327219 1.510040e-05 1.103235e-02
-# Phatr3_J46881  2962.792765      0.3833344 0.08848396  4.332247 1.475949e-05 1.103235e-02
-# Phatr3_EG02289 3054.272931      0.1790519 0.04230251  4.232655 2.309489e-05 1.502905e-02
-# Phatr3_J44925    72.229073      3.9512892 0.93684380  4.217661 2.468500e-05 1.502905e-02
-# Phatr3_J45496  1806.023941      0.2638552 0.06251084  4.220951 2.432741e-05 1.502905e-02
-# Phatr3_J33664  2016.989154      0.9797230 0.23415994  4.183991 2.864360e-05 1.652133e-02
-# Phatr3_EG00539 2041.441037      1.0122966 0.24571998  4.119716 3.793394e-05 2.078590e-02 
+#                   baseMean log2FoldChange       pvalue         padj
+# Phatr3_J43365  1142.664589      3.8743070 7.062248e-17 7.739517e-13
+# Phatr3_J48554  1957.068391      4.4197978 7.477312e-12 4.097193e-08
+# Phatr3_J46195  1117.238681     -0.2820122 2.733266e-11 9.984622e-08
+# Phatr3_EG00672  605.416667      0.8617613 1.379637e-09 3.023889e-06
+# Phatr3_J48069  2106.749044      1.1508417 1.246781e-09 3.023889e-06
+# Phatr3_J47845  3072.316158      0.1805028 1.904635e-08 3.478815e-05
+# Phatr3_J50288  7398.141197      1.1232231 1.482938e-07 2.321645e-04
+# Phatr3_EG02577    5.041134      5.7157040 5.324059e-07 7.293295e-04
+# Phatr3_J46647  1614.509578      0.3860048 1.162065e-06 1.415008e-03
+# Phatr3_J55070  1480.209350      1.9432164 2.347335e-06 2.572445e-03
+# Phatr3_J43073   943.647334      0.2696045 3.196636e-06 2.783074e-03
+# Phatr3_J44100  1604.097640      0.7133686 2.898672e-06 2.783074e-03
+# Phatr3_J48558  1572.467838      1.1094759 3.301393e-06 2.783074e-03
+# Phatr3_EG01376  104.012672      4.2444519 1.510040e-05 1.103235e-02
+# Phatr3_J46881  2962.792765      0.3833344 1.475949e-05 1.103235e-02
+# Phatr3_EG02289 3054.272931      0.1790519 2.309489e-05 1.502905e-02
+# Phatr3_J44925    72.229073      3.9512892 2.468500e-05 1.502905e-02
+# Phatr3_J45496  1806.023941      0.2638552 2.432741e-05 1.502905e-02
+# Phatr3_J33664  2016.989154      0.9797230 2.864360e-05 1.652133e-02
+# Phatr3_EG00539 2041.441037      1.0122966 3.793394e-05 2.078590e-02 
 
 # Write out the list of DE genes P<0.01
 de_genes = res.df %>% dplyr::filter(padj<0.01) %>% arrange(padj)
+dim(de_genes)
+
+# For ensembl with 0.5 included.
+# > dim(de_genes)
+# [1] 23  6
+
+# For ensembl with 0.5 excluded.
+# > dim(de_genes)
+# [1] 13  6
+
 if (transcriptome == "ensembl") {
   save(de_genes, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.ensembl.RData")
 }
 if (transcriptome == "NCBI") {
   save(de_genes, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
 }
+
+
+###### NB From here on you need to have already produced the adj_plot_df object which is created in the run_1_wgcna.follow.up.1.r script.
 
 # TODO this still hasn't been run through for the 'ensembl' version of the analysis.
 # Now compare this to the adjacency score of 43365
@@ -366,7 +385,7 @@ res.df.plot = res.df %>% mutate(x_val=1, rn=row.names(res.df), col=dplyr::case_w
 ggplot(res.df.plot, aes(x=x_val, y=-log10(padj), lab=rn, color=col)) + geom_point() + geom_label_repel(aes(label=rn), label.size=0.01) + scale_color_manual(values = c("red" = "red", "black" = "black")) + guides(color = "none") +
 ggtitle("DE genes (P<0.01); red == adjacency to PHATRDRAFT_43365 > 0.1")
 if (transcriptome == "ensembl") {
-  ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/DEgenes.adjacency.subset.png", height=40, width=20, units="cm")
+  ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/DEgenes.adjacency.subset.ensembl.png", height=40, width=20, units="cm")
 }
 if (transcriptome == "NCBI") {
   ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/DEgenes.adjacency.subset.png", height=40, width=20, units="cm")
