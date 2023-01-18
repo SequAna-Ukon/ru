@@ -295,6 +295,8 @@ if (transcriptome == "NCBI") {
 # DE. In the second comparison, the network should be active in the WT co-culture, but nocked out in the
 # mutant samples, so again, the network genes should be DE. Therefore I would expect an overlap of all 3 (first_de, WT_ax_vs_co_de, mut_vs_wt_co_de)
 # of those groups because they should have the network genes as DE genes.
+
+########### AXENIC DE ###############
 samples_ax_vs_co = samples %>% dplyr::filter(mutant=="FALSE" & shaking!="TRUE")
 
 files_ax_vs_co <- file.path(kallisto.base.dir, samples_ax_vs_co$dir_name, "abundance.h5")
@@ -338,6 +340,7 @@ res_ax_vs_co = results(dds_ax_vs_co)
 
 res_ax_vs_co = as.data.frame(res_ax_vs_co)
 
+# These are the DE genes for the WTax vs WTco comparison.
 res_ax_vs_co.filtered = res_ax_vs_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
 # > dim(res_ax_vs_co.filtered)
 # [1] 538   6
@@ -399,7 +402,27 @@ res_mutant_vs_WT_co = results(dds_mutant_vs_WT_co)
 
 res_mutant_vs_WT_co = as.data.frame(res_mutant_vs_WT_co)
 
+# These are the DE genes for the Axenic effect
 res_mutant_vs_WT_co.filtered = res_mutant_vs_WT_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
+
+
+########## EXAMPLE DELETE ME ###########
+# This is just some code for Ru to have a look at an interesting question he had.
+# It can be delted at a later date.
+# VVVVVVVVVVV
+
+overlap_genes = rownames(res_ax_vs_co.filtered)[rownames(res_ax_vs_co.filtered) %in% rownames(res_mutant_vs_WT_co.filtered)]
+####### NB you will need to have run through the run_2_wgcna.r script to create the light_cyan_module_genes_names.non_shaking.ensembl.RData object
+
+load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/light_cyan_module_genes_names.non_shaking.ensembl.RData")
+head(module_gene_names)
+
+overlap_genes %in% module_gene_names
+
+# ^^^^^^^^^
+########### DELETE ME ##################
+
+
 # > dim(res_mutant_vs_WT_co.filtered)
 # [1] 694   6
 if (transcriptome == "ensembl") {
