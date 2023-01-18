@@ -138,7 +138,7 @@ if (transcriptome == "NCBI") {
 # Next we want to produce a PCA for all of the samples. This means we'll
 # want to make a DESeq2 object that contains all of the samples
 files_all_samples <- file.path(kallisto.base.dir, samples$dir_name, "abundance.h5")
-
+names(files_all_samples) = samples$dir_name
 # Finally we can use tximport to read in the abundance tables
 # and perform the normalizations
 txi_all_samples = tximport(files_all_samples, type = "kallisto", tx2gene = tx2gene)
@@ -154,6 +154,10 @@ dds_all_samples <- dds_all_samples[keep_all_samples,]
 dds_all_samples = DESeq(dds_all_samples)
 
 vsd_all_samples <- vst(dds_all_samples, blind=FALSE)
+
+# output csv of vst transformed and normalized samples
+write.csv(as.data.frame(assay(vsd_all_samples)), "nextflow_ru/run_1_nf/vsd.counts.csv")
+
 # rld_all_samples <- rlog(dds_all_samples, blind=FALSE)
 head(assay(vsd_all_samples), 3)
 
