@@ -35,7 +35,7 @@ if (transcriptome == "NCBI"){
 
 # load de_genes
 if (transcriptome == "ensembl"){
-  load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.ensembl.RData")
+  load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes_05.subset.ensembl.RData")
 }
 if (transcriptome == "NCBI"){
   load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
@@ -46,11 +46,17 @@ if (transcriptome == "NCBI"){
 # We can either use a hard threshold to make the weighted adjacency matrix
 # unweighted, or we can aim to plot the edges with thickness.
 
+# We also need to think about which genes to plot. Do we plot those genes with a high
+# axenic gene-wise correlation, or do we plot the DE genes, or do we plot a combination,
+# or do we plot the genes from the module.
+
+# Currently we are plotting the DE expressed genes.
+
 # To start with, let's just aim to plot up the network with some differing
 # hard thresholds
 
 # subset the adjacency matrix to only the de_genes
-adjacency_sub = adjacency[rownames(de_genes), rownames(de_genes)]
+adjacency_sub = adjacency[rownames(de_genes_05), rownames(de_genes_05)]
 
 # network <- graph_from_adjacency_matrix(ifelse(adjacency_sub > 0.1, 1, 0), mode="undirected")
 
@@ -124,7 +130,7 @@ if (transcriptome == "ensembl"){
         axis.ticks = element_blank(),
             axis.text = element_blank()) + xlab("") + ylab("") +
     guides(size = guide_legend("adjacency score (weight)")) +
-    ggtitle("Network of DE genes (P<0.01) according to their adjacency scores Ensembl (connections >0.1 shown)")
+    ggtitle("Network of DE genes (P<0.05) according to their adjacency scores Ensembl (connections >0.1 shown)")
   ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_adj_net.subset.ensembl.png", height=50, width=40, units="cm")
 }
 if (transcriptome == "NCBI"){

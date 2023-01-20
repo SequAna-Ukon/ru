@@ -30,11 +30,11 @@ if (transcriptome == "NCBI") {
 # head(module_gene_names)
 # head(adjacency)
 
-# subset the adjacency matrix to only the de_genes
+# subset the adjacency matrix to only the light cyan module genes.
 adjacency_sub = adjacency[module_gene_names, module_gene_names]
 data.frame(connectivity=rowSums(adjacency_sub)) %>% arrange(desc(connectivity))
 
-# Strip out the < 0.2 connections and drop any genes that only had 0.2 connections
+# Strip out the < 0.5 connections and drop any genes that only had < 0.5 connections
 h_thresh = 0.5
 adjacency_sub[adjacency_sub < h_thresh] <- 0
 keep = rowSums(adjacency_sub) > 1

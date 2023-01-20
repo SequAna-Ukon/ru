@@ -135,7 +135,7 @@ keep_shaking <- rowSums(counts(dds_shaking) >= 10) >= ceiling(dim(samples_shakin
 dds_shaking <- dds_shaking[keep_shaking,]
 
 vsd_shaking <- vst(dds_shaking, blind=FALSE)
-rld_shaking <- rlog(dds_shaking, blind=FALSE)
+
 head(assay(vsd_shaking), 3)
 
 pcaData_shaking = plotPCA(vsd_shaking, intgroup=c("time_hr", "cell_line"), returnData=TRUE)
@@ -154,6 +154,87 @@ if (transcriptome == "ensembl") {
 if (transcriptome == "NCBI") {
   ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca.filtered.png")
 }
+
+# TODO plot up PC3 and PC4.
+# The plotPCA method only returns the first 2 components which is not helpful
+# We can modify the method.
+# To access the method I followed this: https://stackoverflow.com/questions/1439348/how-to-examine-the-code-of-a-function-in-r-thats-object-class-sensitive
+# methods(plotPCA)
+# getAnywhere(plotPCA.DESeqTransform)
+
+plotPCA.4pc = function (object, intgroup = "condition", ntop = 500, returnData = FALSE) 
+{
+    rv <- rowVars(assay(object))
+    select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, 
+        length(rv)))]
+    pca <- prcomp(t(assay(object)[select, ]))
+    percentVar <- pca$sdev^2/sum(pca$sdev^2)
+    if (!all(intgroup %in% names(colData(object)))) {
+        stop("the argument 'intgroup' should specify columns of colData(dds)")
+    }
+    intgroup.df <- as.data.frame(colData(object)[, intgroup, 
+        drop = FALSE])
+    group <- if (length(intgroup) > 1) {
+        factor(apply(intgroup.df, 1, paste, collapse = ":"))
+    }
+    else {
+        colData(object)[[intgroup]]
+    }
+    d <- data.frame(PC1 = pca$x[, 1], PC2 = pca$x[, 2], PC3 = pca$x[, 3], PC4 = pca$x[, 4], group = group, 
+        intgroup.df, name = colnames(object))
+    if (returnData) {
+        attr(d, "percentVar") <- percentVar[1:4]
+        return(d)
+    }
+    ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "group")) + 
+        geom_point(size = 3) + xlab(paste0("PC1: ", round(percentVar[1] * 
+        100), "% variance")) + ylab(paste0("PC2: ", round(percentVar[2] * 
+        100), "% variance")) + coord_fixed()
+}
+
+pcaData_shaking = plotPCA.4pc(vsd_shaking, intgroup=c("time_hr", "cell_line"), returnData=TRUE)
+
+percentVar_shaking <- round(100 * attr(pcaData_shaking, "percentVar"))
+
+ggplot(pcaData_shaking, aes(PC1, PC3, color=cell_line, shape=time_hr)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar_shaking[1],"% variance")) +
+  ylab(paste0("PC3: ",percentVar_shaking[3],"% variance")) + 
+  coord_fixed() + ggtitle("2nd RNA-seq shaking PCA PC1 PC3") + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000"))
+
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca3.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca3.filtered.png")
+}
+
+ggplot(pcaData_shaking, aes(PC1, PC4, color=cell_line, shape=time_hr)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar_shaking[1],"% variance")) +
+  ylab(paste0("PC4: ",percentVar_shaking[4],"% variance")) + 
+  coord_fixed() + ggtitle("2nd RNA-seq shaking PCA PC1 PC4") + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000"))
+
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca4.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_shaking_pca4.filtered.png")
+}
+
+# verify that the 3 hour samples are considerably different from the other time points
+# by plotting up a heatmap of the genes.
+sample_names_shaking = colnames(assay(dds_shaking))
+annotation_df_shaking = data.frame(time = samples_shaking[sample_names_shaking, "time_hr"], mutant = samples_shaking[sample_names_shaking, "mutant"], axenic = samples_shaking[sample_names_shaking, "axenic"])
+rownames(annotation_df_shaking) = sample_names_shaking
+if (transcriptome == "ensembl") {
+  png("nextflow_ru/run_2_nf/rna_2_shaking_heatmap.filtered.ensembl.png", height=30, width=30, res=600, unit="cm")
+}
+if (transcriptome == "NCBI") {
+  png("nextflow_ru/run_2_nf/rna_2_shaking_heatmap.filtered.png", height=30, width=30, res=600, unit="cm")
+}
+pheatmap(assay(dds_shaking), scale="row", annotation_col=annotation_df_shaking, show_rownames = FALSE, main="heat map of profile similarity all samples and genes" )
+dev.off()
 
 # This PCA looks quite different to the one that Ru produced.
 
@@ -182,16 +263,16 @@ for (time in c(24, 48)){
   dds = DESeq(dds)
   res = results(dds)
 
-  up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 2 & padj < 0.05)
+  up = as.data.frame(res) %>% dplyr::filter(log2FoldChange > 1 & padj < 0.05)
   contrast_non_shaking = append(contrast_non_shaking, paste0(time, "h_WT_CO_vs_WT_AX")); num_genes_non_shaking = append(num_genes_non_shaking, dim(up)[[1]]); up_down_non_shaking = append(up_down_non_shaking, "up");
 
-  down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -2 & padj < 0.05)
+  down = as.data.frame(res) %>% dplyr::filter(log2FoldChange < -1 & padj < 0.05)
   contrast_non_shaking = append(contrast_non_shaking, paste0(time, "h_WT_CO_vs_WT_AX")); num_genes_non_shaking = append(num_genes_non_shaking, dim(down)[[1]]); up_down_non_shaking = append(up_down_non_shaking, "down");
 
 
 
   # Then we will be interested in the WT co-cultured vs the mutants co-cultured
-  samples_sub = samples %>% dplyr::filter(time_hr==time & shaking!="TRUE")
+  samples_sub = samples %>% dplyr::filter(time_hr==time & shaking!="TRUE" & axenic=="FALSE")
   files <- file.path(kallisto.base.dir, samples_sub$dir_name, "abundance.h5")
   txi = tximport(files, type = "kallisto", tx2gene = tx2gene)
   dds = DESeqDataSetFromTximport(txi, colData = samples_sub, design = ~ mutant)
@@ -261,7 +342,7 @@ vsd_non_shaking <- vst(dds_non_shaking, blind=FALSE)
 rld_non_shaking <- rlog(dds_non_shaking, blind=FALSE)
 head(assay(vsd_non_shaking), 3)
 
-pcaData_non_shaking = plotPCA(vsd_non_shaking, intgroup=c("cell_line", "treatment"), returnData=TRUE)
+pcaData_non_shaking = plotPCA.4pc(vsd_non_shaking, intgroup=c("cell_line", "treatment"), returnData=TRUE)
 
 percentVar_non_shaking <- round(100 * attr(pcaData_non_shaking, "percentVar"))
 ggplot(pcaData_non_shaking, aes(PC1, PC2, color=cell_line, shape=treatment)) +
@@ -275,6 +356,32 @@ if (transcriptome == "ensembl") {
 }
 if (transcriptome == "NCBI") {
   ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca.filtered.png")
+}
+
+ggplot(pcaData_non_shaking, aes(PC1, PC3, color=cell_line, shape=treatment)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar_non_shaking[1],"% variance")) +
+  ylab(paste0("PC3: ",percentVar_non_shaking[3],"% variance")) + 
+  coord_fixed() + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000")) + ggtitle("2nd RNA-seq non-shaking PCA PC3")
+
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca3.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca3.filtered.png")
+}
+
+ggplot(pcaData_non_shaking, aes(PC1, PC4, color=cell_line, shape=treatment)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar_non_shaking[1],"% variance")) +
+  ylab(paste0("PC4: ",percentVar_non_shaking[4],"% variance")) + 
+  coord_fixed() + scale_color_manual(values=c("A7" = "#082BD2", "A8" = "#65D527", "WT" = "#000000")) + ggtitle("2nd RNA-seq non-shaking PCA PC4")
+
+if (transcriptome == "ensembl") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca4.filtered.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("nextflow_ru/run_2_nf/rna_2_non_shaking_pca4.filtered.png")
 }
 
 
@@ -342,6 +449,7 @@ res_ax_vs_co = as.data.frame(res_ax_vs_co)
 
 # These are the DE genes for the WTax vs WTco comparison.
 res_ax_vs_co.filtered = res_ax_vs_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
+res_ax_vs_co.filtered_05 = res_ax_vs_co %>% dplyr::filter(padj <= 0.05) %>% dplyr::arrange(padj)
 # > dim(res_ax_vs_co.filtered)
 # [1] 538   6
 # There are many more DE expressed genes than for the 1st RNA seq comparison.
@@ -371,9 +479,11 @@ if (transcriptome == "NCBI") {
 # save this df for use later
 if (transcriptome == "ensembl") {
   save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.ensembl.RData")
+  save(res_ax_vs_co.filtered_05, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co_05.filtered.ensembl.RData")
 }
 if (transcriptome == "NCBI") {
   save(res_ax_vs_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
+  save(res_ax_vs_co.filtered_05, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co_05.filtered.RData")
 }
 
 
@@ -404,6 +514,7 @@ res_mutant_vs_WT_co = as.data.frame(res_mutant_vs_WT_co)
 
 # These are the DE genes for the Axenic effect
 res_mutant_vs_WT_co.filtered = res_mutant_vs_WT_co %>% dplyr::filter(padj <= 0.01) %>% dplyr::arrange(padj)
+res_mutant_vs_WT_co.filtered_05 = res_mutant_vs_WT_co %>% dplyr::filter(padj <= 0.05) %>% dplyr::arrange(padj)
 
 
 ########## EXAMPLE DELETE ME ###########
@@ -476,9 +587,11 @@ if (transcriptome == "NCBI") {
 # save this df for use later
 if (transcriptome == "ensembl") {
   save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.ensembl.RData")
+  save(res_mutant_vs_WT_co.filtered_05, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co_05.filtered.ensembl.RData")
 }
 if (transcriptome == "NCBI") {
   save(res_mutant_vs_WT_co.filtered, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+  save(res_mutant_vs_WT_co.filtered_05, file="/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co_05.filtered.RData")
 }
 
 

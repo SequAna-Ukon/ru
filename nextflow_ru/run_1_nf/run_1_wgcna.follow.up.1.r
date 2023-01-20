@@ -2,7 +2,10 @@
 # We have already run prelimiary analyses of the 1st RNA-seq dataset
 # in the run_1_nf.r and run_1_wgcna.r R scripts.
 
-# In this script we will redo much of what we did in run_1_wgcna.r but for a subset of the samples
+# In this script we will redo much of what we did in run_1_wgcna.r but for a subset of the samples.
+# The logic being that we didn't find a strong module-trait relationship for the full set of samples
+# likely caused due to the lack of signal in the 0 and 0.5 hour samples. So here we leave those
+# samples out.
 # We will refactor much of the code used in run_1_wgcna.r for this purpose.
 
 
@@ -25,6 +28,7 @@ library(WGCNA)
 library(gridExtra)
 library(ggdendro)
 library(ggrepel)
+library(tidyr)
 
 
 sample_subset = c(3, 24, 48)
@@ -157,12 +161,29 @@ if (transcriptome == "NCBI") {
 # Let's try enabling the  multithreading
 enableWGCNAThreads(nThreads = 40) # As far as I can tell this doesn't do much
 
+if (transcriptome == "ensembl") {
+    if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.ensembl.RData")){
+        load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.ensembl.RData")
+    }else{
+        # Make adjacency matrix
+        adjacency = adjacency(wgcna_in, power = 12)
+        # Turn adjacency into topological overlap
+        TOM = TOMsimilarity(adjacency)
+        save(adjacency, TOM, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.ensembl.RData")
+    }
+}
 
-# Make adjacency matrix
-adjacency = adjacency(wgcna_in, power = 12)
-# Turn adjacency into topological overlap
-TOM = TOMsimilarity(adjacency)
-
+if (transcriptome == "NCBI") {
+    if(file.exists("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.RData")){
+        load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.RData")
+    }else{
+        # Make adjacency matrix
+        adjacency = adjacency(wgcna_in, power = 12)
+        # Turn adjacency into topological overlap
+        TOM = TOMsimilarity(adjacency)
+        save(adjacency, TOM, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/adjacency_TOM.subset.RData")
+    }
+}
 
 dissTOM = 1-TOM
 
@@ -194,9 +215,9 @@ MEs = orderMEs(MEs0)
 moduleTraitCor = cor(MEs, traits, use = "p");
 moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
 
-# Similar to the merged module-traits that I have calculated below
-# we see that there are non modules that really correlate strongly with
+# For NCBI there are no modules that really correlate strongly with
 # the axenic state.
+# For Ensembl there is a 0.819 module!
 # > moduleTraitCor
 #                         axenic     time_hr
 # MEcoral2           0.216650421 -0.72191909
@@ -336,6 +357,12 @@ textMatrix = paste(signif(moduleTraitCor, 2), "\n(", signif(moduleTraitPvalue, 1
 
 dim(textMatrix) = dim(moduleTraitCor)
 
+if (transcriptome == "ensembl") {
+  png("nextflow_ru/run_1_nf/run_1_module_trait.unmerged.subset.ensembl.png", width=20, height=60, units="cm", res=300)
+}
+if (transcriptome == "NCBI") {
+  png("nextflow_ru/run_1_nf/run_1_module_trait.unmerged.subset.png", width=20, height=60, units="cm", res=300)
+}
 labeledHeatmap(Matrix = moduleTraitCor,
 xLabels = names(traits),
 yLabels = names(MEs),
@@ -347,7 +374,7 @@ setStdMargins = FALSE,
 cex.text = 0.5,
 zlim = c(-1,1),
 main = paste("Module-trait relationships (unmerged)"))
-
+dev.off()
 
 # Calculate eigengenes
 MEList = moduleEigengenes(wgcna_in, colors = dynamicColors)
@@ -438,6 +465,13 @@ textMatrix = paste(signif(moduleTraitCor, 2), "\n(", signif(moduleTraitPvalue, 1
 
 dim(textMatrix) = dim(moduleTraitCor)
 
+if (transcriptome == "ensembl") {
+  png("nextflow_ru/run_1_nf/run_1_module_trait.merged.subset.ensembl.png", width=20, height=30, units="cm", res=300)
+}
+if (transcriptome == "NCBI") {
+  png("nextflow_ru/run_1_nf/run_1_module_trait.merged.subset.png", width=20, height=30, units="cm", res=300)
+}
+
 labeledHeatmap(Matrix = moduleTraitCor,
 xLabels = names(traits),
 yLabels = names(MEs),
@@ -449,6 +483,7 @@ setStdMargins = FALSE,
 cex.text = 0.5,
 zlim = c(-1,1),
 main = paste("Module-trait relationships (merged)"))
+dev.off()
 
 #==============================================
 #
@@ -795,7 +830,9 @@ head(moduleColors)
 geneTraitSignificance_adj_col = (merge(geneTraitSignificance_adj, moduleColors, by="row.names"))
 rownames(geneTraitSignificance_adj_col) = geneTraitSignificance_adj_col$Row.names
 geneTraitSignificance_adj_col = geneTraitSignificance_adj_col %>% arrange(desc(abs(GS.axenic))) %>% select(-Row.names)
-head(geneTraitSignificance_adj_col, 20)
+table((geneTraitSignificance_adj_col %>% dplyr::filter(abs(GS.axenic) > 0.7) %>% dplyr::select(y))$y)
+head(geneTraitSignificance_adj_col, 40)
+
 # > head(geneTraitSignificance_adj_col, 20)
 #                   GS.axenic  p.GS.axenic   GS.time_hr p.GS.time_hr adj_score
 # PHATRDRAFT_47845  0.8925782 6.333572e-07 -0.116677426    0.6447537  3.722438
@@ -863,8 +900,31 @@ head(geneTraitSignificance_adj_col, 20)
 # Phatr3_J33892  -0.7502096 3.357623e-04  0.382745295    0.1169605 10.368204        coral2
 # Phatr3_J49648   0.7445305 3.940862e-04  0.164497720    0.5142284  2.536175     honeydew1
 # Phatr3_J55070   0.7354498 5.049310e-04  0.137429366    0.5865818  8.568804        coral2
- 
-# TODO check to see if there really was a negative correlation
+
+
+# Finally, plot up the relation between gene trait signficance score and p value and highlight
+# those genes that are that are signficant (Padj<0.05)
+load("/home/humebc/projects/ru/nextflow_ru/run_1_nf/res.df.subset.ensembl.RData")
+head(res.df)
+# Work with the genes that are found in both the network and the DE analysis
+genes_for_plot = rownames(res.df)[rownames(res.df) %in% rownames(geneTraitSignificance_adj_col)]
+
+# # Replace the padj NA values with 1
+# res.df = res.df %>% dplyr::mutate(padj = tidyr::replace_na(padj, 1))
+
+de_padj_plot_df = data.frame(GS.axenic=geneTraitSignificance[genes_for_plot, "GS.axenic"], padj=res.df[genes_for_plot, "padj"])
+rownames(de_padj_plot_df) = genes_for_plot
+ggplot(de_padj_plot_df, aes(x=abs(GS.axenic), y=-log10(padj))) + geom_point(color=ifelse(de_padj_plot_df$padj < 0.05, "red", "black"))
+
+if (transcriptome == "ensembl") {
+  ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/rna_1.padj.GS.axenic.subset.ensembl.png")
+}
+if (transcriptome == "NCBI") {
+  ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/rna_1.padj.GS.axenic.subset.ensembl.png")
+}
+
+
+
 # We can see that the high GS.axenic related genes are spread across several modules for the NCBI version
 # but not so much for Ensembl.
 # and when we look inside the coral2 module we see a negative correlation for NCBI
@@ -877,16 +937,17 @@ head(geneTraitSignificance_adj_col, 20)
 module_of_interest = "coral2"
 column = match(module_of_interest, modNames)
 moduleGenes = moduleColors==module_of_interest
-
-plotting.df = data.frame(MM=abs(geneModuleMembership[moduleGenes, column]), GS=abs(geneTraitSignificance[moduleGenes, "GS.axenic"]))
+moduleGenes_names = row.names(geneModuleMembership)[moduleGenes]
+plotting.df = data.frame(MM=abs(geneModuleMembership[moduleGenes, column]), GS=abs(geneTraitSignificance[moduleGenes, "GS.axenic"]), padj=res.df[moduleGenes_names, "padj"])
 row.names(plotting.df) = row.names(geneModuleMembership)[moduleGenes]
 plotting.df$gene_names = row.names(geneModuleMembership)[moduleGenes]
 
+# color the genes according to their Padj value
 ggplot(plotting.df, aes(x=MM, y=GS, label=gene_names)) + 
-    geom_point(color=dplyr::case_when(plotting.df$GS > 0.75 ~ "red", TRUE ~ "black")) + 
+    geom_point(color=dplyr::case_when(plotting.df$padj < 0.05 ~ "red", TRUE ~ "black")) + 
     geom_label_repel(aes(label=ifelse(GS > .75, gene_names, ""))) + 
-    xlab(paste("Module Membership in", module_of_interest, "module")) + ylab("Gene significance for axenic") + 
-    ggtitle("Module membership vs. gene significance\n")
+    xlab(paste("Module Membership in", module_of_interest, "module")) + ylab("Gene correlation for axenic state") + 
+    ggtitle("Module membership vs. gene significance; red= DE padj<0.05\n")
 
 if (transcriptome == "ensembl") {
   ggsave("/home/humebc/projects/ru/nextflow_ru/run_1_nf/coral2_MM_GS_scatter.subset.ensembl.png")

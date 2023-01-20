@@ -1148,16 +1148,38 @@ if (transcriptome == "NCBI") {
 
 
 # The network is pretty cool.
+
+
 # I'd like to compare the list of de genes for the mutant contrast with the
 # gene list from the network (lightcyan module).
 # The contrast we're intersted in has already been done
 # it was called mut_vs_wt_co_de in the venn diagram.
-if (transcriptome == "ensembl") {
-    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.ensembl.RData")
+
+# Get the P<0.05 DE genes for mutatant state
+# NB I was first working with P<0.01 but I will now try to recreate the networks with P<0.05
+# I am loading the P<0.05 object below and will set the variable to res_mutant_vs_WT_co.filtered so that I don't have to change the code
+pval = 0.05
+if (pval == 0.05){
+  if (transcriptome == "ensembl") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co_05.filtered.ensembl.RData")
+    res_mutant_vs_WT_co.filtered = res_mutant_vs_WT_co.filtered_05
 }
 if (transcriptome == "NCBI") {
-    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co_05.filtered.RData")
+    res_mutant_vs_WT_co.filtered = res_mutant_vs_WT_co.filtered_05
 }
+}
+if (pval == 0.01){
+    if (transcriptome == "ensembl") {
+        load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.ensembl.RData")
+    }
+    if (transcriptome == "NCBI") {
+        load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_mutant_vs_WT_co.filtered.RData")
+    }
+} 
+
+
+
 
 head(res_mutant_vs_WT_co.filtered)
 dim(res_mutant_vs_WT_co.filtered)
@@ -1303,9 +1325,9 @@ rownames(row_annotations) = row_annotations$Row.names
 
 if (transcriptome == "ensembl") {
     row_annotations = row_annotations %>% mutate(gene_clusters=as.factor(gene_clusters)) %>% 
-    mutate(cluster_1=as.factor(gene_clusters == 1)) %>% 
-    mutate(cluster_9=as.factor(gene_clusters == 3)) %>% 
-    mutate(cluster_11_13=as.factor(gene_clusters == 9 | gene_clusters == 12 | gene_clusters == 7)) %>% 
+    # mutate(cluster_1=as.factor(gene_clusters == 1)) %>% 
+    # mutate(cluster_9=as.factor(gene_clusters == 3)) %>% 
+    # mutate(cluster_11_13=as.factor(gene_clusters == 9 | gene_clusters == 12 | gene_clusters == 7)) %>% 
     dplyr::select(-Row.names)
     png("/home/humebc/projects/ru/nextflow_ru/run_2_nf/mutant.de.non_shaking.adjacency.dendro.potential_networks.ensembl.png", width=40, height=30, units="cm", res=300)
 }
@@ -1346,13 +1368,29 @@ if (transcriptome == "NCBI") {
 # Now that we've identified the 4 networks in the mutant DE genes
 # let's have a look at the axenic de genes
 # Load the DE genes from the WT ax vs WT co-cultured
-if (transcriptome == "ensembl") {
+if (pval == 0.05){
+  if (transcriptome == "ensembl") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co_05.filtered.ensembl.RData")
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.ensembl.RData")
+    res_ax_vs_co.filtered = res_ax_vs_co.filtered_05
+}
+if (transcriptome == "NCBI") {
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co_05.filtered.RData")
+    load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
+    res_ax_vs_co.filtered = res_ax_vs_co.filtered_05
+}
+}
+if (pval == 0.01){
+  if (transcriptome == "ensembl") {
     load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.ensembl.RData")
     load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.ensembl.RData")
+    
 }
 if (transcriptome == "NCBI") {
     load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/run_2_res_ax_vs_co.filtered.RData")
     load("/home/humebc/projects/ru/nextflow_ru/run_2_nf/geneTraitSignificance.non_shaking.RData")
+    
+}
 }
 
 head(res_ax_vs_co.filtered)
@@ -1424,7 +1462,7 @@ dev.off()
 #  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 
 # 23 17 24 47 17 55 84 33 20 20 18 22 25 30 25 30 15 17 11 27
 
-gene_clusters_axenic = cutree(tree = hc_axenic, h = 4.8)
+gene_clusters_axenic = cutree(tree = hc_axenic, k = 20)
 gene_clusters_df_axenic = data.frame(gene_clusters = gene_clusters_axenic, row.names=names(gene_clusters_axenic))
 gene_clusters_df_axenic = gene_clusters_df_axenic %>% mutate(gene_clusters=as.factor(gene_clusters))
 

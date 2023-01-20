@@ -199,7 +199,7 @@ ggvenn(
   )
 
 if (transcriptome == "ensembl") {
-  ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.filtered.ensembl.png")
+  ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.filtered.ensembl.png", width=30, height=30, unit="cm")
 }
 if (transcriptome == "NCBI") {
   ggsave("nextflow_ru/run_1_nf/rna_1_gene_venn.filtered.png")
@@ -284,7 +284,7 @@ ggsave("nextflow_ru/run_1_nf/rna_1_heatmap_PHATRDRAFT_43365_only_48.png", heat)
 # largest for the 24 hour samples but I would also include the 3 and 48 hour samples
 # and see if we can find significant genes.
 # Let's start by running the DE with all of the time points except 0.
-time_points = c(3, 24, 48)
+time_points = c(0.5, 3, 24, 48)
 
 samples = read.csv("/home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv", header=TRUE)
 samples = samples %>% mutate(axenic = as.factor(axenic), time_hr = as.factor(time_hr)) %>% mutate(axenic = relevel(axenic, "TRUE"))
@@ -310,64 +310,81 @@ dds = DESeq(dds)
 res = results(dds)
 
 res.df = as.data.frame(res) %>% dplyr::arrange(padj)
-head(res.df, 20)
-# > head(res.df)
-#                    baseMean log2FoldChange      lfcSE      stat       pvalue
-# PHATRDRAFT_43365  1548.7911      3.8539681 0.37605531 10.248408 1.203091e-24
-# PHATRDRAFT_48554  4218.4944      4.5133006 0.51335526  8.791768 1.472240e-18
-# PHATRDRAFT_50288  7614.6849      1.1720971 0.16612762  7.055402 1.721023e-12
-# PHATRDRAFT_44925   187.1997      4.3949089 0.72402836  6.070078 1.278478e-09
-# PHATRDRAFT_43020 13960.1351      0.4619692 0.08115779  5.692235 1.253868e-08
-# PHATRDRAFT_48069  3156.8690      1.1386302 0.19977389  5.699595 1.200926e-08
-#                          padj
-# PHATRDRAFT_43365 1.218370e-20
-# PHATRDRAFT_48554 7.454685e-15
-# PHATRDRAFT_50288 5.809599e-09
-# PHATRDRAFT_44925 3.236787e-06
-# PHATRDRAFT_43020 2.116320e-05
-# PHATRDRAFT_48069 2.116320e-05
-
-# For ensembl
-# > head(res.df, 20)
-#                   baseMean log2FoldChange       pvalue         padj
-# Phatr3_J43365  1142.664589      3.8743070 7.062248e-17 7.739517e-13
-# Phatr3_J48554  1957.068391      4.4197978 7.477312e-12 4.097193e-08
-# Phatr3_J46195  1117.238681     -0.2820122 2.733266e-11 9.984622e-08
-# Phatr3_EG00672  605.416667      0.8617613 1.379637e-09 3.023889e-06
-# Phatr3_J48069  2106.749044      1.1508417 1.246781e-09 3.023889e-06
-# Phatr3_J47845  3072.316158      0.1805028 1.904635e-08 3.478815e-05
-# Phatr3_J50288  7398.141197      1.1232231 1.482938e-07 2.321645e-04
-# Phatr3_EG02577    5.041134      5.7157040 5.324059e-07 7.293295e-04
-# Phatr3_J46647  1614.509578      0.3860048 1.162065e-06 1.415008e-03
-# Phatr3_J55070  1480.209350      1.9432164 2.347335e-06 2.572445e-03
-# Phatr3_J43073   943.647334      0.2696045 3.196636e-06 2.783074e-03
-# Phatr3_J44100  1604.097640      0.7133686 2.898672e-06 2.783074e-03
-# Phatr3_J48558  1572.467838      1.1094759 3.301393e-06 2.783074e-03
-# Phatr3_EG01376  104.012672      4.2444519 1.510040e-05 1.103235e-02
-# Phatr3_J46881  2962.792765      0.3833344 1.475949e-05 1.103235e-02
-# Phatr3_EG02289 3054.272931      0.1790519 2.309489e-05 1.502905e-02
-# Phatr3_J44925    72.229073      3.9512892 2.468500e-05 1.502905e-02
-# Phatr3_J45496  1806.023941      0.2638552 2.432741e-05 1.502905e-02
-# Phatr3_J33664  2016.989154      0.9797230 2.864360e-05 1.652133e-02
-# Phatr3_EG00539 2041.441037      1.0122966 3.793394e-05 2.078590e-02 
-
-# Write out the list of DE genes P<0.01
 de_genes = res.df %>% dplyr::filter(padj<0.01) %>% arrange(padj)
+de_genes_05 = res.df %>% dplyr::filter(padj<0.05) %>% arrange(padj)
+
+de_genes
 dim(de_genes)
 
-# For ensembl with 0.5 included.
+# time_points = c(0, 0.5, 3, 24, 48)
+# > de_genes
+#                  baseMean log2FoldChange      lfcSE      stat       pvalue         padj
+# Phatr3_J50288  7031.88251      1.0729104 0.16023989  6.695651 2.147135e-11 2.306882e-07
+# Phatr3_J45206    46.99013     -1.0152450 0.19180689 -5.293058 1.202876e-07 5.328924e-04
+# Phatr3_J48179  2185.08541     -0.3129456 0.05956283 -5.254042 1.487972e-07 5.328924e-04
+# Phatr3_J47845  2969.11043      0.1644953 0.03455247  4.760740 1.928848e-06 5.180886e-03
+# Phatr3_EG02436  299.43685      1.2943892 0.28191582  4.591403 4.402760e-06 9.460651e-03
+               
+# > dim(de_genes)
+# [1] 5 6
+
+# time_points = c(0.5, 3, 24, 48)
+# > de_genes
+#                 baseMean log2FoldChange         padj
+# Phatr3_J43365  1288.3952      3.8420253 4.156868e-20
+# Phatr3_J48554  1994.1282      4.5259397 1.519424e-14
+# Phatr3_J50288  7267.0427      1.1754255 3.180050e-09
+# Phatr3_EG00672  589.4421      0.7499014 1.623557e-05
+# Phatr3_J47845  3035.6550      0.1620162 2.721847e-05
+# Phatr3_J44100  1677.4719      0.7261295 3.257097e-05
+# Phatr3_J48069  2371.4739      1.1204601 3.257097e-05
+# Phatr3_J55070  1893.4140      2.0212544 3.257097e-05
+# Phatr3_J40174  5493.6254      0.6432357 4.998282e-05
+# Phatr3_EG00539 2173.4051      1.0592779 8.837045e-05
+# Phatr3_J48558  1702.2235      1.0594701 1.030480e-04
+# Phatr3_J45862  2173.3212      0.9395540 2.758613e-04
+# Phatr3_J40731  1611.7583      0.3977943 5.290145e-04
+# Phatr3_J43363  5055.2536      1.5761297 5.290145e-04
+# Phatr3_J49510  4913.7833      0.7469656 9.421749e-04
+# Phatr3_J49001  3697.8612      0.6705975 9.660410e-04
+# Phatr3_EG02571 1127.8137      0.4892888 1.002187e-03
+# Phatr3_J50347  2048.3081      0.7147405 1.096905e-03
+# Phatr3_J50470  2550.0146      0.6309737 1.767717e-03
+# Phatr3_J48179  2179.9604     -0.2984729 2.515990e-03
+# Phatr3_J46647  1517.1669      0.3914516 2.550292e-03
+# Phatr3_J4283   1797.0117      1.1224756 4.247067e-03
+# Phatr3_J43073   930.8427      0.2165014 5.656657e-03
+
 # > dim(de_genes)
 # [1] 23  6
 
-# For ensembl with 0.5 excluded.
-# > dim(de_genes)
-# [1] 13  6
+# # time_points = c(3, 24, 48)
+# > de_genes
+#                   baseMean log2FoldChange      lfcSE      stat       pvalue         padj
+# Phatr3_J43365  1142.664589      3.8743070 0.46421205  8.345985 7.062248e-17 7.739517e-13
+# Phatr3_J48554  1957.068391      4.4197978 0.64539341  6.848223 7.477312e-12 4.097193e-08
+# Phatr3_J46195  1117.238681     -0.2820122 0.04234246 -6.660269 2.733266e-11 9.984622e-08
+# Phatr3_EG00672  605.416667      0.8617613 0.14225560  6.057837 1.379637e-09 3.023889e-06
+# Phatr3_J48069  2106.749044      1.1508417 0.18946676  6.074109 1.246781e-09 3.023889e-06
+# Phatr3_J47845  3072.316158      0.1805028 0.03211538  5.620447 1.904635e-08 3.478815e-05
+# Phatr3_J50288  7398.141197      1.1232231 0.21375730  5.254665 1.482938e-07 2.321645e-04
+# Phatr3_EG02577    5.041134      5.7157040 1.13989199  5.014251 5.324059e-07 7.293295e-04
+# Phatr3_J46647  1614.509578      0.3860048 0.07939221  4.861998 1.162065e-06 1.415008e-03
+# Phatr3_J55070  1480.209350      1.9432164 0.41161462  4.720960 2.347335e-06 2.572445e-03
+# Phatr3_J43073   943.647334      0.2696045 0.05788282  4.657763 3.196636e-06 2.783074e-03
+# Phatr3_J44100  1604.097640      0.7133686 0.15249852  4.677872 2.898672e-06 2.783074e-03
+# Phatr3_J48558  1572.467838      1.1094759 0.23853958  4.651119 3.301393e-06 2.783074e-03
+
 
 if (transcriptome == "ensembl") {
   save(de_genes, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.ensembl.RData")
+  save(de_genes_05, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes_05.subset.ensembl.RData")
+  save(res.df, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/res.df.subset.ensembl.RData")
 }
 if (transcriptome == "NCBI") {
   save(de_genes, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes.subset.RData")
+  save(de_genes_05, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/de_genes_05.subset.RData")
+  save(res.df, file="/home/humebc/projects/ru/nextflow_ru/run_1_nf/res.df.subset.RData")
 }
 
 
