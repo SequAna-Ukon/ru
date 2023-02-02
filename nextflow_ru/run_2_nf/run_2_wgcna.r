@@ -765,7 +765,7 @@ merge = mergeCloseModules(wgcna_in, dynamicColors, cutHeight = MEDissThres, verb
 # The merged module colors
 mergedColors = merge$colors;
 # Eigengenes of the new merged modules:
-mergedMEs = merge$newMEs;
+merge = merge$newMEs;
 
 plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
 c("Dynamic Tree Cut", "Merged dynamic"),
@@ -774,9 +774,11 @@ addGuide = TRUE, guideHang = 0.05)
 
 # Rename to moduleColors
 moduleColors = mergedColors
+names(moduleColors) = colnames(wgcna_in)
 # Construct numerical labels corresponding to the colors
 colorOrder = c("grey", standardColors(200));
 moduleLabels = match(moduleColors, colorOrder)-1;
+names(moduleLabels) = colnames(wgcna_in)
 MEs = mergedMEs;
 
 
@@ -1040,6 +1042,8 @@ if (transcriptome == "NCBI") {
 
 head(de_genes)
 geneTraitSignificance[rownames(de_genes),]
+# For Ru, create a dataframe that holds the geneTraitSignificance and module label and module color in it
+geneTraitSignificance_df = geneTraitSignificance %>% dplyr::mutate(module_color=moduleColors[rownames(geneTraitSignificance)], module_label=moduleLabels[rownames(geneTraitSignificance)])
 
 # > geneTraitSignificance[rownames(de_genes),]
 #                    GS.axenic  p.GS.axenic  GS.time_hr p.GS.time_hr   GS.mutant  p.GS.mutant
@@ -1301,8 +1305,12 @@ head(module_gene_names)
 hc <- hclust(dist(1-adjacency_de), method = "complete")
 as.dendrogram(hc) %>% plot(horiz = TRUE)
 abline(v=5.8, col = "red")
-gene_clusters = cutree(hc, h = 5.8)
+gene_clusters = cutree(hc, k = 20)
 gene_clusters_df = as.data.frame(gene_clusters, row.names=names(gene_clusters))
+
+# FOR RU:
+# To look up the genes in a particular cluster (cluster==12) you can do e.g.:
+# rownames(gene_clusters_df %>% dplyr::filter(gene_clusters==12))
 
 # > table(gene_clusters)
 # gene_clusters
