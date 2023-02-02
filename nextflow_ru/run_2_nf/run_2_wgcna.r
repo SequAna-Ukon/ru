@@ -765,7 +765,7 @@ merge = mergeCloseModules(wgcna_in, dynamicColors, cutHeight = MEDissThres, verb
 # The merged module colors
 mergedColors = merge$colors;
 # Eigengenes of the new merged modules:
-merge = merge$newMEs;
+mergedMEs = merge$newMEs;
 
 plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
 c("Dynamic Tree Cut", "Merged dynamic"),
