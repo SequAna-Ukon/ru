@@ -18,7 +18,10 @@
 # To produce the final tx2gene file
 
 #Abdo
-#the newest version 
+#the newest version of the gff3 and tanscripts[cdna] were download "ASM15095v2.56" from "https://ftp.ensemblgenomes.ebi.ac.uk/pub/protists/release-56/fasta/phaeodactylum_tricornutum/cdna/Phaeodactylum_tricornutum.ASM15095v2.cdna.all.fa.gz"
+# and "https://ftp.ensemblgenomes.ebi.ac.uk/pub/protists/release-56/gff3/phaeodactylum_tricornutum/Phaeodactylum_tricornutum.ASM15095v2.56.gff3.gz"
+#trancriptome were idexed without ptrparing tx2gene file usig "kallisto index -i Phaeodactylum_tricornutum.ASM15095v2.cdna.all.kallisto.index Phaeodactylum_tricornutum.ASM15095v2.cdna.all.fa.gz"
+#the nextflow rerunned after editing 
 
 
 # I also created a samples meta file: /home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv
