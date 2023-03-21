@@ -17,7 +17,13 @@
 # I then further processed this file with: awk -F "\t" 'BEGIN{print "TXNAME\tGENEID"} {gsub("rna-", "", $1); gsub("gene-", "", $2); print $1 "\t" $2}' tx2gene.raw > tx2gene.txt
 # To produce the final tx2gene file
 
+#Abdo
+#the newest version 
+
+
 # I also created a samples meta file: /home/humebc/projects/ru/nextflow_ru/run_1_nf/samples_run_1.csv
+
+
 
 library(dplyr)
 library(stringr)
